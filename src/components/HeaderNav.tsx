@@ -101,6 +101,17 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
       {/* Zone 3: Actions (Responsive, compact on mobile) */}
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {/* Mobile quick buttons */}
+        <button
+          onClick={() => {
+            sound.playClick();
+            onOpenRules();
+          }}
+          className="md:hidden p-1.5 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
+          title="ルール解説"
+        >
+          <HelpCircle className="w-4 h-4 text-amber-400" />
+        </button>
+
         {onOpenCustomImages && (
           <button
             onClick={() => {
