@@ -47,7 +47,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   return (
     <div
-      className={`relative w-full max-w-4xl mx-auto rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-md flex flex-col items-center justify-between min-h-[420px] sm:min-h-[460px] overflow-hidden transition-colors duration-500 border ${
+      className={`relative w-full max-w-5xl mx-auto rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-md flex flex-col items-center justify-between min-h-[420px] sm:min-h-[460px] overflow-hidden transition-colors duration-500 border ${
         isRevolution
           ? 'bg-gradient-to-b from-slate-950 via-rose-950/30 to-slate-950 border-rose-900/60 shadow-rose-950/40'
           : 'bg-gradient-to-b from-slate-950 via-emerald-950/20 to-slate-950 border-emerald-900/40 shadow-emerald-950/30'
