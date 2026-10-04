@@ -47,7 +47,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
 
   return (
     <div
-      className={`relative w-full max-w-5xl mx-auto rounded-3xl p-4 sm:p-6 shadow-2xl backdrop-blur-md flex flex-col items-center justify-between min-h-[420px] sm:min-h-[460px] overflow-hidden transition-colors duration-500 border ${
+      className={`relative w-full max-w-5xl mx-auto rounded-2xl sm:rounded-3xl p-2.5 sm:p-6 shadow-2xl backdrop-blur-md flex flex-col items-center justify-between min-h-[380px] sm:min-h-[460px] overflow-hidden transition-colors duration-500 border box-border ${
         isRevolution
           ? 'bg-gradient-to-b from-slate-950 via-rose-950/30 to-slate-950 border-rose-900/60 shadow-rose-950/40'
           : 'bg-gradient-to-b from-slate-950 via-emerald-950/20 to-slate-950 border-emerald-900/40 shadow-emerald-950/30'
@@ -85,13 +85,15 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         >
           {isRevolution ? (
             <>
-              <Flame className="w-4 h-4 text-rose-400 fill-rose-500 animate-bounce" />
-              <span>革命発動中 【 Z が最強 ＞ A が最弱 】</span>
+              <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400 fill-rose-500 animate-bounce shrink-0" />
+              <span className="hidden sm:inline">革命発動中 【 Z が最強 ＞ A が最弱 】</span>
+              <span className="sm:hidden text-[10px]">革命中 (Z＞A)</span>
             </>
           ) : (
             <>
-              <Crown className="w-4 h-4 text-amber-400" />
-              <span>通常秩序 【 A が最強 ＞ Z が最弱 】</span>
+              <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+              <span className="hidden sm:inline">通常秩序 【 A が最強 ＞ Z が最弱 】</span>
+              <span className="sm:hidden text-[10px]">通常秩序 (A＞Z)</span>
             </>
           )}
         </div>
@@ -116,7 +118,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
       <div className="w-full my-auto flex flex-col items-center justify-center py-2 z-10">
         
         {/* Battle Slots Container */}
-        <div className="relative flex items-center justify-center gap-5 sm:gap-14 w-full">
+        <div className="relative flex items-center justify-center gap-2 sm:gap-14 w-full">
           
           {/* Challenger Slot */}
           <div className="flex flex-col items-center gap-2 relative">
@@ -172,11 +174,11 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   )}
                 </>
               ) : (
-                <div className="w-36 h-52 border-2 border-dashed border-amber-900/40 rounded-xl flex flex-col items-center justify-center bg-slate-950/40 text-stone-500 text-xs p-3 text-center gap-2">
-                  <div className="w-8 h-8 rounded-full border border-dashed border-amber-900/60 flex items-center justify-center text-amber-500/40">
+                <div className="w-28 sm:w-36 h-40 sm:h-52 border-2 border-dashed border-amber-900/40 rounded-xl flex flex-col items-center justify-center bg-slate-950/40 text-stone-500 text-[10px] sm:text-xs p-2 sm:p-3 text-center gap-1 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-dashed border-amber-900/60 flex items-center justify-center text-amber-500/40">
                     ?
                   </div>
-                  <span>カードを配置中...</span>
+                  <span>カード配置中...</span>
                 </div>
               )}
             </div>
@@ -185,24 +187,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           </div>
 
           {/* VS Center Marker & Clash Beam */}
-          <div className="flex flex-col items-center justify-center px-1">
+          <div className="flex flex-col items-center justify-center px-0.5 sm:px-1 shrink-0">
             <div
-              className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center shadow-2xl transition-all duration-300 ${
+              className={`relative w-9 h-9 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center shadow-2xl transition-all duration-300 ${
                 battleReveal
                   ? 'bg-amber-500 border-amber-300 text-slate-950 scale-110 shadow-amber-500/50'
                   : 'bg-slate-900 border-amber-500/50 text-amber-400 shadow-amber-950/60'
               }`}
             >
-              <Swords className={`w-6 h-6 sm:w-8 sm:h-8 ${battleReveal ? 'animate-spin [animation-iteration-count:1]' : 'animate-pulse'}`} />
+              <Swords className={`w-4 h-4 sm:w-8 sm:h-8 ${battleReveal ? 'animate-spin [animation-iteration-count:1]' : 'animate-pulse'}`} />
             </div>
 
-            <span className="font-cinzel text-xs font-black text-amber-400/90 tracking-widest mt-1">
+            <span className="font-cinzel text-[10px] sm:text-xs font-black text-amber-400/90 tracking-widest mt-1">
               VS
             </span>
 
             {/* Clash Result compare label */}
             {battleReveal && challengerCard && defenderCard && (
-              <div className="mt-1 px-2 py-0.5 rounded bg-slate-950/80 border border-amber-500/30 font-cinzel text-[11px] font-bold text-amber-300 whitespace-nowrap shadow-md">
+              <div className="mt-1 px-1.5 sm:px-2 py-0.5 rounded bg-slate-950/80 border border-amber-500/30 font-cinzel text-[10px] sm:text-[11px] font-bold text-amber-300 whitespace-nowrap shadow-md">
                 {challengerCard.letter} {isChallengerWinner ? '＞' : '＜'} {defenderCard.letter}
               </div>
             )}
@@ -262,8 +264,8 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   )}
                 </>
               ) : (
-                <div className="w-36 h-52 border-2 border-dashed border-sky-900/40 rounded-xl flex flex-col items-center justify-center bg-slate-950/40 text-stone-500 text-xs p-3 text-center gap-2">
-                  <div className="w-8 h-8 rounded-full border border-dashed border-sky-900/60 flex items-center justify-center text-sky-500/40">
+                <div className="w-28 sm:w-36 h-40 sm:h-52 border-2 border-dashed border-sky-900/40 rounded-xl flex flex-col items-center justify-center bg-slate-950/40 text-stone-500 text-[10px] sm:text-xs p-2 sm:p-3 text-center gap-1 sm:gap-2">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-dashed border-sky-900/60 flex items-center justify-center text-sky-500/40">
                     ?
                   </div>
                   <span>応戦待機中...</span>
