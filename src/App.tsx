@@ -619,6 +619,7 @@ export default function App() {
     let loserDraws = 0;
     let leviathanShuffle = false;
     let interactionNeeded: EffectInteractionState | null = null;
+    let currentDrawPile = [...drawPile];
 
     if (!isUnicornNegated && !instantWinner) {
       // Check Revolutionary (R) - Winner effect
@@ -661,7 +662,7 @@ export default function App() {
         case 'S':
           loserDraws = 1;
           effects.push(`${loserCard.japaneseName}の効果：敗北により山札から1枚ドロー`);
-          addLog(`${loser.name} は「${loserCard.japaneseName}」の敗北時効果で1枚ドローします。`, 'effect');
+          addLog(`${loser.name} は「${loserCard.japaneseName}」の敗北時効果で山札からカードを引きます。`, 'effect');
           break;
 
         // Joker (J):
@@ -752,19 +753,19 @@ export default function App() {
         // Werewolf (W):
         // "バトルに負けた場合、山札のすべてのカードを見て好きなカードを1枚手札に加える。"
         case 'W':
-          if (drawPile.length > 0) {
+          if (currentDrawPile.length > 0) {
             effects.push('狼男の効果：山札の全カードを見て好きな1枚をサーチ！');
             if (loser.type === 'human') {
               interactionNeeded = {
                 type: 'WEREWOLF_SEARCH_DECK',
                 actorPlayerId: loser.id,
-                availableCards: [...drawPile],
+                availableCards: [...currentDrawPile],
                 description: '山札の中から好きなカードを1枚選んで手札に加えてください。',
               };
             } else {
               // CPU searches best card
-              const picked = selectCpuWerewolfDeckCard(drawPile, newRevolution);
-              setDrawPile((prev) => prev.filter((c) => c.letter !== picked.letter));
+              const picked = selectCpuWerewolfDeckCard(currentDrawPile, newRevolution);
+              currentDrawPile = currentDrawPile.filter((c) => c.letter !== picked.letter);
               loser.hand.push(picked);
               addLog(`${loser.name} の狼男は山札の深淵から「${picked.japaneseName}」を嗅ぎつけ手札に加えました！`, 'effect');
             }
@@ -840,7 +841,7 @@ export default function App() {
     // Apply Leviathan hand shuffle
     if (leviathanShuffle) {
       const handCounts = currentPlayers.map((p) => p.hand.length);
-      const allCards = [...currentPlayers.flatMap((p) => p.hand), ...drawPile];
+      const allCards = [...currentPlayers.flatMap((p) => p.hand), ...currentDrawPile];
       // Shuffle
       for (let i = allCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -849,16 +850,17 @@ export default function App() {
       currentPlayers.forEach((p, idx) => {
         p.hand = allCards.splice(0, handCounts[idx]);
       });
-      setDrawPile(allCards);
+      currentDrawPile = allCards;
       sound.playCardDraw();
     }
 
-    // Apply loser draw if E, H, I, K, M, N, S
-    if (loserDraws > 0 && drawPile.length > 0) {
-      const drawn = drawPile[0];
-      setDrawPile((prev) => prev.slice(1));
+    // Apply loser draw if E, H, I, K, M, N, S (Consumes card from currentDrawPile!)
+    if (loserDraws > 0 && currentDrawPile.length > 0) {
+      const drawn = currentDrawPile[0];
+      currentDrawPile = currentDrawPile.slice(1);
       loser.hand.push(drawn);
       sound.playCardDraw();
+      addLog(`${loser.name} は「${loserCard.japaneseName}」の効果で山札から「${drawn.japaneseName}」を引きました。`, 'effect');
     }
 
     // Points & Capture calculation:
@@ -895,6 +897,10 @@ export default function App() {
       setInstantWinReason(instantReason);
     }
 
+    // Update state with updated players and new draw pile
+    setPlayers([...currentPlayers]);
+    setDrawPile(currentDrawPile);
+
     // If interaction modal needed (e.g. human Werewolf search, Vampire steal)
     if (interactionNeeded) {
       setEffectInteraction(interactionNeeded);
@@ -908,7 +914,7 @@ export default function App() {
     if (isOnlineMatch) {
       syncToOnline({
         players: [...currentPlayers],
-        drawPile: [...drawPile],
+        drawPile: currentDrawPile,
         discardPile: [...discardPile],
         isRevolution: newRevolution,
         battleRecord: record,
@@ -1012,12 +1018,20 @@ export default function App() {
   const handleSelectInteractionCard = (card: CardData) => {
     if (!effectInteraction) return;
 
+    // Security check: Only the actor can choose!
+    if (humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
+      return;
+    }
+
     const updatedPlayers = [...players];
     const actor = updatedPlayers.find((p) => p.id === effectInteraction.actorPlayerId);
     if (!actor) return;
 
+    let updatedDrawPile = [...drawPile];
+
     if (effectInteraction.type === 'WEREWOLF_SEARCH_DECK') {
-      setDrawPile((prev) => prev.filter((c) => c.letter !== card.letter));
+      updatedDrawPile = updatedDrawPile.filter((c) => c.letter !== card.letter);
+      setDrawPile(updatedDrawPile);
       actor.hand.push(card);
       addLog(`${actor.name} は山札から「${card.japaneseName}」を選び手札に加えました！`, 'effect');
     } else if (effectInteraction.type === 'VAMPIRE_STEAL' || effectInteraction.type === 'XENOS_STEAL') {
@@ -1042,7 +1056,7 @@ export default function App() {
     if (isOnlineMatch) {
       syncToOnline({
         players: updatedPlayers,
-        drawPile,
+        drawPile: updatedDrawPile,
         effectInteraction: null,
         waitingForBattleNext: true,
       });
@@ -1051,6 +1065,12 @@ export default function App() {
 
   const handleSelectInteractionPlayer = (targetPlayer: Player) => {
     if (!effectInteraction) return;
+
+    // Security check: Only the actor can choose!
+    if (humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
+      return;
+    }
+
     const updatedPlayers = [...players];
     const target = updatedPlayers.find((p) => p.id === targetPlayer.id);
     if (target) {
@@ -1197,6 +1217,8 @@ export default function App() {
       {/* Interactive Effect Modals */}
       <EffectModal
         interaction={effectInteraction}
+        viewerPlayerId={humanPlayer?.id}
+        actorPlayerName={players.find((p) => p.id === effectInteraction?.actorPlayerId)?.name}
         onSelectCard={handleSelectInteractionCard}
         onSelectPlayer={handleSelectInteractionPlayer}
         onClose={() => setEffectInteraction(null)}
