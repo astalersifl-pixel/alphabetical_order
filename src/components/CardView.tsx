@@ -156,14 +156,17 @@ export const CardView: React.FC<CardViewProps> = ({
     const list: string[] = [];
     if (customArt) list.push(customArt);
     if (card.imageUrl) list.push(card.imageUrl);
-    list.push(`/cards/${card.letter}.jpg`);
-    list.push(`/${card.letter}.jpg`);
-    list.push(`/cards/${card.letter}.png`);
-    list.push(`/${card.letter}.png`);
-    list.push(`/cards/${card.letter.toLowerCase()}.jpg`);
-    list.push(`/${card.letter.toLowerCase()}.jpg`);
-    list.push(`/cards/${card.letter.toLowerCase()}.png`);
-    list.push(`/${card.letter.toLowerCase()}.png`);
+
+    const extensions = ['.jpg', '.JPG', '.png', '.PNG', '.jpeg', '.JPEG', '.webp', '.WEBP'];
+    const letterVariants = [card.letter, card.letter.toLowerCase()];
+
+    for (const ext of extensions) {
+      for (const l of letterVariants) {
+        list.push(`/cards/${l}${ext}`);
+        list.push(`/${l}${ext}`);
+      }
+    }
+
     return Array.from(new Set(list));
   }, [customArt, card?.imageUrl, card?.letter]);
 
