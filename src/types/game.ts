@@ -15,6 +15,7 @@ export interface CardData {
   category: CardCategory;
   lore: string;
   flavorQuote?: string;
+  imageUrl?: string; // Optional card artwork image (URL or local path)
 }
 
 export type PlayerType = 'human' | 'cpu';
@@ -26,7 +27,8 @@ export interface Player {
   avatarSeed: number;
   avatarImage?: string;
   hand: CardData[];
-  capturedCards: CardData[];
+  capturedCards: CardData[]; // 相手から獲得したポイントカード
+  usedCards: CardData[]; // バトルに勝って使用済みとなった自分のカード
   score: number;
   firePhoenixUsed: boolean;
   isRevealedToAll: boolean;
@@ -40,6 +42,7 @@ export type GamePhase =
   | 'SELECT_PLAY_CARD'
   | 'SELECT_OPPONENT'
   | 'OPPONENT_SELECT_CARD'
+  | 'READY_TO_CLASH' // 両者のカードが伏せられて出揃い、「勝負する！」ボタン待機中
   | 'BATTLE_REVEAL'
   | 'RESOLVING_EFFECTS'
   | 'EFFECT_INTERACTION' // e.g. Werewolf choosing from deck, Vampire choosing from hand

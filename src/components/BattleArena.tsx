@@ -25,6 +25,7 @@ interface BattleArenaProps {
   discardCount: number;
   onContinue?: () => void;
   waitingForPlayerAction?: boolean;
+  onStartClash?: () => void;
 }
 
 export const BattleArena: React.FC<BattleArenaProps> = ({
@@ -39,6 +40,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   discardCount,
   onContinue,
   waitingForPlayerAction = false,
+  onStartClash,
 }) => {
   const isChallengerWinner = battleRecord?.winnerId === challenger?.id;
   const isDefenderWinner = battleRecord?.winnerId === defender?.id;
@@ -273,6 +275,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           </div>
 
         </div>
+
+        {/* "勝負する！" Button when both cards are placed and ready to reveal */}
+        {!battleReveal && challengerCard && defenderCard && onStartClash && (
+          <div className="mt-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200 z-30">
+            <button
+              type="button"
+              onClick={onStartClash}
+              className="px-10 py-3.5 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:via-rose-400 hover:to-amber-400 text-slate-950 font-black font-serif-jp text-base sm:text-lg rounded-2xl shadow-2xl shadow-rose-950/80 hover:shadow-amber-500/40 transition-all flex items-center gap-3 cursor-pointer group active:scale-95 animate-bounce ring-4 ring-amber-400/50"
+            >
+              <Swords className="w-5 h-5 group-hover:rotate-45 transition-transform" />
+              <span>いざ、勝負する！</span>
+              <Sparkles className="w-5 h-5 fill-slate-950" />
+            </button>
+            <span className="text-xs text-amber-300 font-serif-jp mt-2 animate-pulse font-medium">
+              双方のカードが揃いました！ボタンを押してオープンしてください
+            </span>
+          </div>
+        )}
 
         {/* Battle Dramatic Outcome & Effects Section */}
         {battleReveal && battleRecord && (

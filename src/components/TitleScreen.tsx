@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, Swords, BookOpen, HelpCircle, Users, Bot, Sparkles, Play, Globe } from 'lucide-react';
+import { Crown, Swords, BookOpen, HelpCircle, Users, Bot, Sparkles, Play, Globe, Image as ImageIcon } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface TitleScreenProps {
@@ -11,6 +11,7 @@ interface TitleScreenProps {
   onOpenRules: () => void;
   onOpenCodex: () => void;
   onOpenOnline: () => void;
+  onOpenCustomImages?: () => void;
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
@@ -18,6 +19,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   onOpenRules,
   onOpenCodex,
   onOpenOnline,
+  onOpenCustomImages,
 }) => {
   const [playerCount, setPlayerCount] = useState<number>(2);
   const [mode, setMode] = useState<'cpu' | 'local'>('cpu');
@@ -204,7 +206,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </div>
 
         {/* Secondary Links */}
-        <div className="flex items-center gap-6 mt-6 text-xs text-stone-400 font-serif-jp">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-6 text-xs text-stone-400 font-serif-jp">
           <button
             onClick={() => {
               sound.playClick();
@@ -216,7 +218,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <span>遊び方・公式ルール</span>
           </button>
 
-          <span className="text-stone-700">·</span>
+          <span className="text-stone-700 hidden sm:inline">·</span>
 
           <button
             onClick={() => {
@@ -228,6 +230,23 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             <BookOpen className="w-4 h-4 text-amber-400/80" />
             <span>全26枚 カード図鑑</span>
           </button>
+
+          {onOpenCustomImages && (
+            <>
+              <span className="text-stone-700 hidden sm:inline">·</span>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  onOpenCustomImages();
+                }}
+                className="hover:text-amber-300 text-amber-400/90 font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <ImageIcon className="w-4 h-4 text-amber-400" />
+                <span>自作イラスト設定</span>
+              </button>
+            </>
+          )}
         </div>
 
       </div>

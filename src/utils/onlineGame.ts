@@ -159,6 +159,7 @@ export async function startOnlineGame(roomId: string, players: RoomPlayer[]): Pr
     avatarSeed: p.avatarSeed || idx + 1,
     hand: deck.splice(0, 3),
     capturedCards: [],
+    usedCards: [],
     score: 0,
     firePhoenixUsed: false,
     isRevealedToAll: false,

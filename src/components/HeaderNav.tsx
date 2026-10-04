@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, BookOpen, RotateCcw, HelpCircle, History } from 'lucide-react';
+import { Volume2, VolumeX, BookOpen, RotateCcw, HelpCircle, History, Image as ImageIcon } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface HeaderNavProps {
@@ -11,6 +11,7 @@ interface HeaderNavProps {
   onNewGame: () => void;
   onlineRoomCode?: string;
   onCopyRoomCode?: () => void;
+  onOpenCustomImages?: () => void;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({
@@ -22,6 +23,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onNewGame,
   onlineRoomCode,
   onCopyRoomCode,
+  onOpenCustomImages,
 }) => {
   return (
     <header className="w-full flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-amber-900/40 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
@@ -79,11 +81,37 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
           <History className="w-4 h-4 text-amber-400/80" />
           <span>戦闘ログ</span>
         </button>
+
+        {onOpenCustomImages && (
+          <button
+            onClick={() => {
+              sound.playClick();
+              onOpenCustomImages();
+            }}
+            className="hover:text-amber-300 text-amber-400/90 font-bold transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+          >
+            <ImageIcon className="w-4 h-4 text-amber-400" />
+            <span>自作画像設定</span>
+          </button>
+        )}
       </nav>
 
       {/* Zone 3: 1-2 primary actions */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile quick buttons */}
+        {onOpenCustomImages && (
+          <button
+            onClick={() => {
+              sound.playClick();
+              onOpenCustomImages();
+            }}
+            className="md:hidden p-2 text-amber-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            title="自作画像設定"
+          >
+            <ImageIcon className="w-4 h-4" />
+          </button>
+        )}
+
         <button
           onClick={() => {
             sound.playClick();

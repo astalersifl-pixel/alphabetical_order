@@ -81,9 +81,14 @@ export const RulesModal: React.FC<RulesModalProps> = ({
                 通常はアルファベットの順（Aが一番強く、Zが一番弱い）で勝敗が決まります。
               </li>
               <li>
-                <strong className="text-amber-200">効果発動＆ポイント獲得：</strong>
+                <strong className="text-amber-200">効果発動＆カード所持：</strong>
                 戦闘終了後、カードに記載された効果が発動します。
-                その後、勝ったプレイヤーは負けたプレイヤーのカードを自らの獲得ポイントに加えます。
+                勝者は自分のカードを「使用済み」として所持し、相手のカードを「ポイントカード」として獲得・所持します。
+                ※これらのカードはいつでも誰でも自由に確認できます。
+              </li>
+              <li>
+                <strong className="text-amber-200">手番終了＆次のターン：</strong>
+                手番が終了し、次は【バトルに敗北したプレイヤー】の番となります！
               </li>
             </ol>
           </div>

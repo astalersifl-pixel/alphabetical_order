@@ -30,6 +30,8 @@ import { LogModal } from './components/LogModal';
 import { GameOverModal } from './components/GameOverModal';
 import { EffectModal } from './components/EffectModal';
 import { OnlineLobbyModal } from './components/OnlineLobbyModal';
+import { PublicCardsModal } from './components/PublicCardsModal';
+import { CustomImageModal } from './components/CustomImageModal';
 import {
   OnlineGameState,
   OnlineRoomData,
@@ -58,6 +60,17 @@ export default function App() {
   const [isOnlineMatch, setIsOnlineMatch] = useState<boolean>(false);
   const isRemoteSyncRef = useRef<boolean>(false);
 
+  // Public Cards Inspector State
+  const [inspectPlayer, setInspectPlayer] = useState<Player | null>(null);
+  const [inspectTab, setInspectTab] = useState<'captured' | 'used'>('captured');
+  const [isPublicCardsModalOpen, setIsPublicCardsModalOpen] = useState<boolean>(false);
+
+  const handleOpenInspectPlayer = (target: Player, tab: 'captured' | 'used') => {
+    setInspectPlayer(target);
+    setInspectTab(tab);
+    setIsPublicCardsModalOpen(true);
+  };
+
   // Battle State
   const [challengerId, setChallengerId] = useState<string | null>(null);
   const [defenderId, setDefenderId] = useState<string | null>(null);
@@ -77,6 +90,7 @@ export default function App() {
   const [isCodexOpen, setIsCodexOpen] = useState<boolean>(false);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
   const [isLogOpen, setIsLogOpen] = useState<boolean>(false);
+  const [isCustomImageModalOpen, setIsCustomImageModalOpen] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [effectInteraction, setEffectInteraction] = useState<EffectInteractionState | null>(null);
   const [gameLogs, setGameLogs] = useState<GameLogEntry[]>([]);
@@ -235,6 +249,7 @@ export default function App() {
       avatarSeed: 1,
       hand: [],
       capturedCards: [],
+      usedCards: [],
       score: 0,
       firePhoenixUsed: false,
       isRevealedToAll: false,
@@ -251,6 +266,7 @@ export default function App() {
         avatarSeed: i + 1,
         hand: [],
         capturedCards: [],
+        usedCards: [],
         score: 0,
         firePhoenixUsed: false,
         isRevealedToAll: false,
@@ -448,8 +464,18 @@ export default function App() {
         sound.playCardFlip();
         addLog(`${defender.name} はカードを伏せて応戦しました！`, 'battle');
 
-        // Resolve battle!
-        resolveBattle(currentChallengerCard, card, currentPlayers, currentRevolution);
+        const activeChallenger = currentPlayers.find((p) => p.id === challengerId);
+        const hasHumanParticipant = activeChallenger?.type === 'human' || defender.type === 'human';
+
+        if (hasHumanParticipant) {
+          setTurnInstruction(`両者のカードが伏せられました。「勝負する！」を押して開示してください！`);
+          setGamePhase('READY_TO_CLASH');
+        } else {
+          // Both are CPUs, resolve automatically after short suspense
+          setTimeout(() => {
+            resolveBattle(currentChallengerCard, card, currentPlayers, currentRevolution);
+          }, 1000);
+        }
       }, 700);
     } else {
       // Human defender (Local or Online)
@@ -486,7 +512,25 @@ export default function App() {
     sound.playCardFlip();
     addLog(`${defender.name} は応戦カードを伏せて出しました！`, 'battle');
 
-    resolveBattle(challengerCard, selectedHandCard, updatedPlayers, isRevolution);
+    const clashInstruction = '両者のカードが揃いました！「勝負する！」を押してオープンしてください！';
+    setTurnInstruction(clashInstruction);
+    setGamePhase('READY_TO_CLASH');
+
+    if (isOnlineMatch) {
+      syncToOnline({
+        players: updatedPlayers,
+        defenderCard: selectedHandCard,
+        gamePhase: 'READY_TO_CLASH',
+        turnInstruction: clashInstruction,
+      });
+    }
+  };
+
+  // Trigger clash reveal on "勝負する！" button click
+  const handleStartClash = () => {
+    if (!challengerCard || !defenderCard) return;
+    sound.playClick();
+    resolveBattle(challengerCard, defenderCard, players, isRevolution);
   };
 
   // Core Battle Resolution Logic
@@ -813,8 +857,7 @@ export default function App() {
     }
 
     // Points & Capture calculation:
-    // "勝ったプレイヤーは負けたプレイヤーのカードを自分のポイントとして加える。"
-    // (Unless Fire Phoenix returned it to hand)
+    // "勝者は自分のカードは使用済みとして所持し、相手のカードをポイントとして所持する。"
     if (firePhoenixReturned) {
       loser.hand.push(loserCard);
       loser.firePhoenixUsed = true;
@@ -823,8 +866,8 @@ export default function App() {
       winner.score += loserCard.points;
     }
 
-    // Winner's played card goes to discard pile
-    setDiscardPile((prev) => [winnerCard, ...prev]);
+    // 勝者は自分のカードを使用済みとして所持
+    winner.usedCards.push(winnerCard);
 
     // Save record
     const record: BattleRecord = {
@@ -861,7 +904,7 @@ export default function App() {
       syncToOnline({
         players: [...currentPlayers],
         drawPile: [...drawPile],
-        discardPile: [winnerCard, ...discardPile],
+        discardPile: [...discardPile],
         isRevolution: newRevolution,
         battleRecord: record,
         battleReveal: true,
@@ -902,8 +945,15 @@ export default function App() {
       return;
     }
 
-    // Next turn player index
-    const nextIndex = (turnPlayerIndex + 1) % players.length;
+    // 次はバトルに敗北したプレイヤーの番となる
+    let nextIndex = (turnPlayerIndex + 1) % players.length;
+    if (battleRecord?.loserId) {
+      const loserIndex = players.findIndex((p) => p.id === battleRecord.loserId);
+      if (loserIndex !== -1) {
+        nextIndex = loserIndex;
+      }
+    }
+
     const drawnCard = drawPile[0];
     const newDrawPile = drawPile.slice(1);
     const updatedPlayers = [...players];
@@ -914,7 +964,7 @@ export default function App() {
     };
 
     const nextTurnNum = turnNumber + 1;
-    const nextInstruction = `${nextPlayer.name} のターンです。手札から場に出すカードを選択してください。`;
+    const nextInstruction = `${nextPlayer.name}（敗北側）の手番です。手札から場に出すカードを選択してください。`;
 
     setPlayers(updatedPlayers);
     setDrawPile(newDrawPile);
@@ -932,7 +982,7 @@ export default function App() {
     setGamePhase('SELECT_PLAY_CARD');
 
     sound.playCardDraw();
-    addLog(`${nextPlayer.name} のターン：山札からカードを1枚引きました。`, 'turn');
+    addLog(`${nextPlayer.name}（敗北者）の手番：山札からカードを1枚引きました。`, 'turn');
 
     if (isOnlineMatch) {
       syncToOnline({
@@ -1064,6 +1114,7 @@ export default function App() {
         onOpenCodex={() => setIsCodexOpen(true)}
         onOpenRules={() => setIsRulesOpen(true)}
         onOpenLog={() => setIsLogOpen(true)}
+        onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
         onNewGame={() => {
           setIsOnlineMatch(false);
           setOnlineRoomId(null);
@@ -1081,6 +1132,7 @@ export default function App() {
             onOpenRules={() => setIsRulesOpen(true)}
             onOpenCodex={() => setIsCodexOpen(true)}
             onOpenOnline={() => setIsOnlineModalOpen(true)}
+            onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
           />
         ) : (
           <div className="w-full flex-1 flex flex-col justify-between gap-4">
@@ -1092,6 +1144,7 @@ export default function App() {
               isSelectOpponentPhase={isHumanTurn && gamePhase === 'SELECT_OPPONENT'}
               onSelectOpponent={handleHumanSelectOpponent}
               viewerPlayerId={humanPlayer?.id || 'p1'}
+              onInspectPlayer={handleOpenInspectPlayer}
             />
 
             {/* Center Area: Battle Arena */}
@@ -1107,6 +1160,7 @@ export default function App() {
               discardCount={discardPile.length}
               onContinue={handleAdvanceTurn}
               waitingForPlayerAction={waitingForBattleNext}
+              onStartClash={handleStartClash}
             />
 
             {/* Bottom Area: Human Player's Rack */}
@@ -1125,6 +1179,7 @@ export default function App() {
                   }
                 }}
                 turnInstruction={turnInstruction}
+                onInspectPlayer={handleOpenInspectPlayer}
               />
             )}
 
@@ -1145,6 +1200,7 @@ export default function App() {
         isOpen={isCodexOpen}
         onClose={() => setIsCodexOpen(false)}
         isRevolution={isRevolution}
+        onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
       />
 
       {/* Rules Modal */}
@@ -1164,6 +1220,12 @@ export default function App() {
         logs={gameLogs}
       />
 
+      {/* Custom Card Artworks Modal */}
+      <CustomImageModal
+        isOpen={isCustomImageModalOpen}
+        onClose={() => setIsCustomImageModalOpen(false)}
+      />
+
       {/* Game Over Victory Screen */}
       <GameOverModal
         isOpen={gamePhase === 'GAME_OVER'}
@@ -1172,6 +1234,14 @@ export default function App() {
         instantWinReason={instantWinReason}
         onRestart={handleRestartGame}
         onOpenCodex={() => setIsCodexOpen(true)}
+      />
+
+      {/* Public Cards Inspector Modal (ポイントカード・使用済みカード確認) */}
+      <PublicCardsModal
+        isOpen={isPublicCardsModalOpen}
+        onClose={() => setIsPublicCardsModalOpen(false)}
+        targetPlayer={inspectPlayer}
+        initialTab={inspectTab}
       />
 
       {/* Online Lobby Modal */}

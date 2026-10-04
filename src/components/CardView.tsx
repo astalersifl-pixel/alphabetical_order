@@ -1,5 +1,6 @@
 import React from 'react';
 import { CardData } from '../types/game';
+import { getCustomCardArtwork, getCardDesignMode, CardDesignMode } from '../utils/customCardImages';
 
 interface CardViewProps {
   card?: CardData;
@@ -114,17 +115,46 @@ export const CardView: React.FC<CardViewProps> = ({
 
   const theme = getThemeStyles();
 
+  const [customArt, setCustomArt] = React.useState<string | null>(() =>
+    card ? getCustomCardArtwork(card.letter) : null
+  );
+
+  React.useEffect(() => {
+    if (!card) return;
+    setCustomArt(getCustomCardArtwork(card.letter));
+
+    const handleArtUpdate = (e: any) => {
+      if (e?.detail?.all || e?.detail?.letter === card.letter) {
+        setCustomArt(getCustomCardArtwork(card.letter));
+      }
+    };
+
+    window.addEventListener('ao-card-art-updated', handleArtUpdate);
+    return () => window.removeEventListener('ao-card-art-updated', handleArtUpdate);
+  }, [card?.letter]);
+
+  const [designMode, setDesignMode] = React.useState<CardDesignMode>(() => getCardDesignMode());
+
+  React.useEffect(() => {
+    const handleModeUpdate = (e: any) => {
+      setDesignMode(e?.detail?.mode || getCardDesignMode());
+    };
+    window.addEventListener('ao-card-design-mode-updated', handleModeUpdate);
+    return () => window.removeEventListener('ao-card-design-mode-updated', handleModeUpdate);
+  }, []);
+
   const [imgAttempt, setImgAttempt] = React.useState<number>(0);
   const [imgFailed, setImgFailed] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     setImgAttempt(0);
     setImgFailed(false);
-  }, [card?.letter, card?.imageUrl]);
+  }, [card?.letter, card?.imageUrl, customArt]);
 
   const candidateSources = React.useMemo(() => {
     if (!card) return [];
     const list: string[] = [];
+    if (customArt) list.push(customArt);
     if (card.imageUrl) list.push(card.imageUrl);
     list.push(`/cards/${card.letter}.jpg`);
     list.push(`/${card.letter}.jpg`);
@@ -135,7 +165,7 @@ export const CardView: React.FC<CardViewProps> = ({
     list.push(`/cards/${card.letter.toLowerCase()}.png`);
     list.push(`/${card.letter.toLowerCase()}.png`);
     return Array.from(new Set(list));
-  }, [card?.imageUrl, card?.letter]);
+  }, [customArt, card?.imageUrl, card?.letter]);
 
   const currentImageSrc =
     !imgFailed && imgAttempt < candidateSources.length ? candidateSources[imgAttempt] : null;
@@ -147,6 +177,49 @@ export const CardView: React.FC<CardViewProps> = ({
       setImgFailed(true);
     }
   };
+
+  // Full-Art Illustration-Only Mode (When card has an artwork image)
+  if (designMode === 'art_only' && currentImageSrc) {
+    return (
+      <div
+        onClick={!disabled && onClick ? onClick : undefined}
+        className={`group relative ${sizeStyles} select-none transition-all duration-200 rounded-xl overflow-hidden shadow-xl border-2 ${
+          selected
+            ? 'ring-4 ring-amber-300 -translate-y-3 shadow-amber-400/40 shadow-2xl border-amber-300 z-20'
+            : `${theme.border} ${theme.glow} hover:border-amber-300/80`
+        } ${isPlayable ? 'cursor-pointer hover:-translate-y-2 hover:shadow-2xl' : ''} ${
+          disabled ? 'opacity-50 grayscale cursor-not-allowed' : ''
+        } ${isWinningClash ? 'ring-4 ring-amber-400 scale-105 shadow-2xl shadow-amber-400/50 z-20' : ''} ${className}`}
+      >
+        {/* Full-bleed Card Illustration Only */}
+        <img
+          src={currentImageSrc}
+          alt={card.japaneseName}
+          onError={handleImageError}
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+        />
+
+        {/* Optional Badge */}
+        {badgeText && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 z-20 bg-amber-500 text-slate-950 text-[10px] font-bold px-2 py-0.5 rounded shadow">
+            {badgeText}
+          </div>
+        )}
+
+        {/* Subtle Hover / Tap Tooltip for Effect & Details */}
+        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-slate-950/95 via-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex flex-col justify-end z-20">
+          <div className="flex items-center justify-between text-xs font-bold text-amber-300">
+            <span className="font-cinzel text-sm">{card.letter} : {card.japaneseName}</span>
+            <span className="font-mono text-amber-400">{card.points}pt</span>
+          </div>
+          <p className="text-[10px] text-stone-200 leading-tight line-clamp-2 mt-0.5 font-serif-jp">
+            {card.shortEffect}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
