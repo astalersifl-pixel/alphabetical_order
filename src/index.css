@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Noto Serif JP', serif, sans-serif;
+  }
+}
+
+.font-cinzel {
+  font-family: 'Cinzel', serif;
+}
+
+.font-serif-jp {
+  font-family: 'Noto Serif JP', serif;
+}

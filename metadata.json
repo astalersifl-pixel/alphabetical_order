@@ -1,0 +1,6 @@
+{
+  "name": "Alphabetical Order ～勇者と魔王～",
+  "description": "AからZの26枚のカードで繰り広げる心理戦・頭脳戦カードゲーム。勇者と魔王、革命、特殊効果を駆使して勝利を掴め！",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
