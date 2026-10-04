@@ -285,6 +285,8 @@ export default function App() {
     setIsRevolution(false);
     setTurnPlayerIndex(0);
     setTurnNumber(1);
+    setChallengerId(newPlayers[0].id);
+    setDefenderId(null);
     setInstantWinWinnerId(null);
     setInstantWinReason('');
     setBattleRecord(null);
@@ -372,6 +374,7 @@ export default function App() {
           );
           setPlayers([...updatedPlayers]);
           setChallengerCard(card);
+          setChallengerId(activePlayer.id);
           setDefenderId(target.id);
 
           sound.playCardFlip();
@@ -400,6 +403,7 @@ export default function App() {
     };
     setPlayers(updatedPlayers);
     setChallengerCard(selectedHandCard);
+    setChallengerId(activePlayer.id);
     setSelectedHandCard(null);
 
     sound.playCardFlip();
@@ -544,8 +548,9 @@ export default function App() {
     setBattleReveal(true);
     sound.playClash();
 
-    const challenger = currentPlayers.find((p) => p.id === challengerId)!;
-    const defender = currentPlayers.find((p) => p.id === defenderId)!;
+    const activeChallengerId = challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
+    let challenger = currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
+    let defender = currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
 
     // Compare cards
     const comp = compareCards(cCard, dCard, currentRevolution);
@@ -1125,7 +1130,7 @@ export default function App() {
       />
 
       {/* Main Viewport */}
-      <main className="flex-1 flex flex-col items-center justify-between p-2 sm:p-4 md:p-6 w-full max-w-7xl mx-auto">
+      <main className="flex-1 flex flex-col items-center justify-between p-2 sm:p-4 w-full max-w-5xl mx-auto">
         {gamePhase === 'TITLE' ? (
           <TitleScreen
             onStartGame={handleStartGame}
