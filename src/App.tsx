@@ -1110,7 +1110,7 @@ export default function App() {
     (isHumanTurn && gamePhase === 'SELECT_PLAY_CARD') || isHumanChallenged;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none w-full max-w-full overflow-x-hidden">
       
       {/* 3-Zone Header Nav Contract */}
       <HeaderNav
@@ -1130,7 +1130,7 @@ export default function App() {
       />
 
       {/* Main Viewport */}
-      <main className="flex-1 flex flex-col items-center justify-between p-2 sm:p-4 w-full max-w-5xl mx-auto">
+      <main className="flex-1 flex flex-col items-center justify-between p-1.5 sm:p-4 w-full max-w-full sm:max-w-5xl mx-auto box-border overflow-x-hidden">
         {gamePhase === 'TITLE' ? (
           <TitleScreen
             onStartGame={handleStartGame}
@@ -1140,7 +1140,7 @@ export default function App() {
             onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
           />
         ) : (
-          <div className="w-full flex-1 flex flex-col justify-between gap-4">
+          <div className="w-full max-w-full flex-1 flex flex-col justify-between gap-2.5 sm:gap-4 box-border">
             
             {/* Top Area: Opponents */}
             <OpponentsBar
