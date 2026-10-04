@@ -22,7 +22,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
   onInspectPlayer,
 }) => {
   return (
-    <div className="w-full flex items-center justify-center gap-3 sm:gap-6 flex-wrap py-2">
+    <div className="w-full max-w-5xl mx-auto flex items-center justify-center gap-2 sm:gap-6 flex-wrap py-1 sm:py-2 px-1">
       {opponents.map((opponent) => {
         const isCurrentTurn = opponent.id === activePlayerId;
         const isRevealedToViewer =
@@ -31,7 +31,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
         return (
           <div
             key={opponent.id}
-            className={`relative min-w-[210px] sm:min-w-[280px] p-3 rounded-2xl border transition-all ${
+            className={`relative w-full max-w-[320px] sm:max-w-xs p-2.5 sm:p-3 rounded-2xl border transition-all box-border ${
               isCurrentTurn
                 ? 'bg-amber-950/40 border-amber-500/70 shadow-lg shadow-amber-950/30 ring-1 ring-amber-400/40'
                 : 'bg-slate-900/80 border-slate-800 shadow-md'
@@ -152,7 +152,7 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   onInspectPlayer,
 }) => {
   return (
-    <div className="w-full max-w-5xl mx-auto rounded-3xl p-4 sm:p-5 bg-slate-950/90 border border-amber-900/50 shadow-2xl backdrop-blur-md flex flex-col items-center">
+    <div className="w-full max-w-5xl mx-auto rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 bg-slate-950/90 border border-amber-900/50 shadow-2xl backdrop-blur-md flex flex-col items-center box-border overflow-hidden">
       
       {/* Player Header & Guidance */}
       <div className="w-full flex items-center justify-between flex-wrap gap-2 mb-3 pb-2 border-b border-white/10">
