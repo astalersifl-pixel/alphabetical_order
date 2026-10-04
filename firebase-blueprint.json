@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "A multiplayer game room for online card battles.",
+      "type": "object",
+      "properties": {
+        "roomCode": {
+          "type": "string",
+          "description": "6-digit unique room code",
+          "minLength": 4,
+          "maxLength": 10
+        },
+        "hostId": {
+          "type": "string",
+          "description": "User ID or player ID of the host",
+          "maxLength": 64
+        },
+        "maxPlayers": {
+          "type": "number",
+          "description": "Maximum number of players in room (2 to 4)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["WAITING", "PLAYING", "FINISHED"],
+          "description": "Current status of the room"
+        },
+        "gameState": {
+          "type": "object",
+          "description": "Serialized game state including players, deck, turn, and battle info"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the room was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the room was last updated"
+        }
+      },
+      "required": ["roomCode", "hostId", "status", "maxPlayers"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": {
+        "$ref": "#/entities/Room"
+      },
+      "description": "Collection of multiplayer game rooms"
+    }
+  }
+}

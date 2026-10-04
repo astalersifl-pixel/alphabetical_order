@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Crown, Swords, BookOpen, HelpCircle, Users, Bot, Sparkles, Play } from 'lucide-react';
+import { Crown, Swords, BookOpen, HelpCircle, Users, Bot, Sparkles, Play, Globe } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface TitleScreenProps {
@@ -10,12 +10,14 @@ interface TitleScreenProps {
   }) => void;
   onOpenRules: () => void;
   onOpenCodex: () => void;
+  onOpenOnline: () => void;
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
   onStartGame,
   onOpenRules,
   onOpenCodex,
+  onOpenOnline,
 }) => {
   const [playerCount, setPlayerCount] = useState<number>(2);
   const [mode, setMode] = useState<'cpu' | 'local'>('cpu');
@@ -62,6 +64,41 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           A～Zの26枚に封じられた神・英傑・魔獣たちの心理戦。
           勇者が魔王を狩るか、革命が秩序を覆すか、狡猾な策略が勝者を決める。
         </p>
+
+        {/* Online Multiplayer Highlight Banner */}
+        <div className="w-full mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playClick();
+              onOpenOnline();
+            }}
+            className="w-full p-4 rounded-2xl bg-gradient-to-r from-cyan-950/80 via-indigo-950/70 to-slate-900 border-2 border-cyan-400/60 hover:border-cyan-300 shadow-xl shadow-cyan-950/40 hover:shadow-cyan-500/20 text-left transition-all cursor-pointer group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 rounded-xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 group-hover:scale-105 transition-transform">
+                <Globe className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-serif-jp text-base font-black text-cyan-300 group-hover:text-cyan-200">
+                    オンライン対戦（離れた人と遊ぶ）
+                  </span>
+                  <span className="bg-cyan-500/20 border border-cyan-400/50 text-[10px] text-cyan-300 font-bold px-2 py-0.5 rounded-full">
+                    リアルタイム
+                  </span>
+                </div>
+                <p className="text-xs text-stone-300 font-serif-jp mt-0.5">
+                  合言葉や招待リンクをスマホやPCの友達に送ってすぐに遊べます
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-xs font-bold font-serif-jp group-hover:bg-cyan-500/30 transition-colors">
+              <span>部屋を作る・入る</span>
+              <span>→</span>
+            </div>
+          </button>
+        </div>
 
         {/* Game Setup Controls */}
         <div className="w-full bg-slate-950/70 border border-amber-900/40 rounded-2xl p-5 mb-8 text-left space-y-5">

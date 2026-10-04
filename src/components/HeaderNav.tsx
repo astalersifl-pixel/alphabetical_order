@@ -9,6 +9,8 @@ interface HeaderNavProps {
   onOpenRules: () => void;
   onOpenLog: () => void;
   onNewGame: () => void;
+  onlineRoomCode?: string;
+  onCopyRoomCode?: () => void;
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({
@@ -18,15 +20,29 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onOpenRules,
   onOpenLog,
   onNewGame,
+  onlineRoomCode,
+  onCopyRoomCode,
 }) => {
   return (
     <header className="w-full flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-amber-900/40 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
       
-      {/* Zone 1: Single text element wordmark */}
-      <div className="flex items-center gap-2">
+      {/* Zone 1: Single text element wordmark + Room Code if online */}
+      <div className="flex items-center gap-3">
         <span className="font-cinzel text-lg sm:text-xl font-bold tracking-tight text-amber-400 whitespace-nowrap">
           Alphabetical Order
         </span>
+
+        {onlineRoomCode && (
+          <button
+            type="button"
+            onClick={onCopyRoomCode}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 text-[11px] font-mono hover:bg-cyan-900/50 cursor-pointer transition-colors"
+            title="合言葉をコピーして友達を招待"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>合言葉: {onlineRoomCode}</span>
+          </button>
+        )}
       </div>
 
       {/* Zone 2: 4-6 clean text navigation links */}

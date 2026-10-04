@@ -29,6 +29,18 @@ import { RulesModal } from './components/RulesModal';
 import { LogModal } from './components/LogModal';
 import { GameOverModal } from './components/GameOverModal';
 import { EffectModal } from './components/EffectModal';
+import { OnlineLobbyModal } from './components/OnlineLobbyModal';
+import { ReactionOverlay } from './components/ReactionOverlay';
+import {
+  OnlineGameState,
+  OnlineRoomData,
+  ReactionStamp,
+  RoomPlayer,
+  subscribeToRoom,
+  syncOnlineGameState,
+  sendOnlineReaction,
+  rematchOnlineGame,
+} from './utils/onlineGame';
 
 export default function App() {
   // Game Setup State
@@ -39,6 +51,16 @@ export default function App() {
   const [discardPile, setDiscardPile] = useState<CardData[]>([]);
   const [isRevolution, setIsRevolution] = useState<boolean>(false);
   const [turnNumber, setTurnNumber] = useState<number>(1);
+
+  // Online Multiplayer State
+  const [isOnlineModalOpen, setIsOnlineModalOpen] = useState<boolean>(false);
+  const [initialRoomCode, setInitialRoomCode] = useState<string>('');
+  const [onlineRoomId, setOnlineRoomId] = useState<string | null>(null);
+  const [onlineRoomCode, setOnlineRoomCode] = useState<string>('');
+  const [myOnlinePlayerId, setMyOnlinePlayerId] = useState<string | null>(null);
+  const [isOnlineMatch, setIsOnlineMatch] = useState<boolean>(false);
+  const [onlineReactions, setOnlineReactions] = useState<ReactionStamp[]>([]);
+  const isRemoteSyncRef = useRef<boolean>(false);
 
   // Battle State
   const [challengerId, setChallengerId] = useState<string | null>(null);
@@ -68,6 +90,116 @@ export default function App() {
     const next = !isMuted;
     setIsMuted(next);
     sound.setMuted(next);
+  };
+
+  // Check for ?room= in URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roomParam = params.get('room');
+    if (roomParam) {
+      setInitialRoomCode(roomParam.trim());
+      setIsOnlineModalOpen(true);
+    }
+  }, []);
+
+  // Sync state to Firestore helper
+  const syncToOnline = (override: Partial<OnlineGameState>) => {
+    if (!isOnlineMatch || !onlineRoomId) return;
+    const fullState: OnlineGameState = {
+      players,
+      turnPlayerIndex,
+      drawPile,
+      discardPile,
+      isRevolution,
+      turnNumber,
+      gamePhase,
+      challengerId,
+      defenderId,
+      challengerCard,
+      defenderCard,
+      battleReveal,
+      battleRecord,
+      waitingForBattleNext,
+      instantWinWinnerId,
+      instantWinReason,
+      turnInstruction,
+      effectInteraction,
+      gameLogs,
+      reactions: onlineReactions,
+      ...override,
+    };
+    syncOnlineGameState(onlineRoomId, fullState);
+  };
+
+  // Subscribe to room changes when in an online match
+  useEffect(() => {
+    if (!isOnlineMatch || !onlineRoomId) return;
+
+    const unsubscribe = subscribeToRoom(onlineRoomId, (roomData) => {
+      if (!roomData.gameState) return;
+      const s = roomData.gameState;
+
+      // Check for remote sounds
+      if (s.battleReveal && !battleReveal) {
+        sound.playClash();
+      }
+      if (s.isRevolution !== isRevolution) {
+        sound.playRevolution();
+      }
+      if (s.instantWinWinnerId && !instantWinWinnerId) {
+        sound.playInstantWin();
+      }
+
+      isRemoteSyncRef.current = true;
+      setPlayers(s.players);
+      setTurnPlayerIndex(s.turnPlayerIndex);
+      setDrawPile(s.drawPile);
+      setDiscardPile(s.discardPile);
+      setIsRevolution(s.isRevolution);
+      setTurnNumber(s.turnNumber);
+      setGamePhase(s.gamePhase);
+      setChallengerId(s.challengerId);
+      setDefenderId(s.defenderId);
+      setChallengerCard(s.challengerCard);
+      setDefenderCard(s.defenderCard);
+      setBattleReveal(s.battleReveal);
+      setBattleRecord(s.battleRecord);
+      setWaitingForBattleNext(s.waitingForBattleNext);
+      setInstantWinWinnerId(s.instantWinWinnerId);
+      setInstantWinReason(s.instantWinReason);
+      setTurnInstruction(s.turnInstruction);
+      setEffectInteraction(s.effectInteraction);
+      setGameLogs(s.gameLogs || []);
+      setOnlineReactions(s.reactions || []);
+    });
+
+    return () => unsubscribe();
+  }, [isOnlineMatch, onlineRoomId, battleReveal, isRevolution, instantWinWinnerId]);
+
+  // Handle Online Game Started from Lobby
+  const handleOnlineGameStarted = (
+    roomId: string,
+    myPlayerId: string,
+    roomData: OnlineRoomData
+  ) => {
+    setOnlineRoomId(roomId);
+    setOnlineRoomCode(roomData.roomCode);
+    setMyOnlinePlayerId(myPlayerId);
+    setIsOnlineMatch(true);
+    setIsOnlineModalOpen(false);
+
+    if (roomData.gameState) {
+      const s = roomData.gameState;
+      setPlayers(s.players);
+      setTurnPlayerIndex(s.turnPlayerIndex);
+      setDrawPile(s.drawPile);
+      setDiscardPile(s.discardPile);
+      setIsRevolution(s.isRevolution);
+      setTurnNumber(s.turnNumber);
+      setGamePhase(s.gamePhase);
+      setTurnInstruction(s.turnInstruction);
+      setGameLogs(s.gameLogs || []);
+    }
   };
 
   // Helper: append log
@@ -272,6 +404,14 @@ export default function App() {
     } else {
       setTurnInstruction('バトルを挑む対戦相手を選択してください。');
       setGamePhase('SELECT_OPPONENT');
+      if (isOnlineMatch) {
+        syncToOnline({
+          players: updatedPlayers,
+          challengerCard: selectedHandCard,
+          gamePhase: 'SELECT_OPPONENT',
+          turnInstruction: 'バトルを挑む対戦相手を選択してください。',
+        });
+      }
     }
   };
 
@@ -318,9 +458,18 @@ export default function App() {
         resolveBattle(currentChallengerCard, card, currentPlayers, currentRevolution);
       }, 700);
     } else {
-      // Local human defender
-      setTurnInstruction(`${defender.name} の応戦：手札から出すカードを選択してください。`);
-      // Human will pick via UI
+      // Human defender (Local or Online)
+      const instruction = `${defender.name} の応戦：手札から出すカードを選択してください。`;
+      setTurnInstruction(instruction);
+      if (isOnlineMatch) {
+        syncToOnline({
+          players: currentPlayers,
+          challengerCard: currentChallengerCard,
+          defenderId: defender.id,
+          gamePhase: 'OPPONENT_SELECT_CARD',
+          turnInstruction: instruction,
+        });
+      }
     }
   };
 
@@ -711,10 +860,25 @@ export default function App() {
     } else {
       // Normal advance
       setWaitingForBattleNext(true);
-      // If Devil triggered end or instant win, will conclude when advancing
-      if (instantWinner || shouldEndGameAfterBattle) {
-        // Will conclude on next
-      }
+    }
+
+    // Sync battle result to online room
+    if (isOnlineMatch) {
+      syncToOnline({
+        players: [...currentPlayers],
+        drawPile: [...drawPile],
+        discardPile: [winnerCard, ...discardPile],
+        isRevolution: newRevolution,
+        battleRecord: record,
+        battleReveal: true,
+        challengerCard: cCard,
+        defenderCard: dCard,
+        instantWinWinnerId: instantWinner,
+        instantWinReason: instantReason,
+        effectInteraction: interactionNeeded,
+        gamePhase: interactionNeeded ? 'EFFECT_INTERACTION' : 'BATTLE_REVEAL',
+        waitingForBattleNext: !interactionNeeded,
+      });
     }
   };
 
@@ -724,6 +888,7 @@ export default function App() {
 
     if (instantWinWinnerId) {
       setGamePhase('GAME_OVER');
+      if (isOnlineMatch) syncToOnline({ gamePhase: 'GAME_OVER' });
       return;
     }
 
@@ -731,6 +896,7 @@ export default function App() {
     if (battleRecord && (battleRecord.challengerCard.letter === 'D' || battleRecord.defenderCard.letter === 'D')) {
       addLog('魔王の出現により世界が閉ざされました。ゲーム終了！', 'special');
       setGamePhase('GAME_OVER');
+      if (isOnlineMatch) syncToOnline({ gamePhase: 'GAME_OVER' });
       return;
     }
 
@@ -738,14 +904,59 @@ export default function App() {
     if (drawPile.length === 0) {
       addLog('山札が尽きたためゲーム終了！', 'special');
       setGamePhase('GAME_OVER');
+      if (isOnlineMatch) syncToOnline({ gamePhase: 'GAME_OVER' });
       return;
     }
 
     // Next turn player index
     const nextIndex = (turnPlayerIndex + 1) % players.length;
+    const drawnCard = drawPile[0];
+    const newDrawPile = drawPile.slice(1);
+    const updatedPlayers = [...players];
+    const nextPlayer = updatedPlayers[nextIndex];
+    updatedPlayers[nextIndex] = {
+      ...nextPlayer,
+      hand: [...nextPlayer.hand, drawnCard],
+    };
+
+    const nextTurnNum = turnNumber + 1;
+    const nextInstruction = `${nextPlayer.name} のターンです。手札から場に出すカードを選択してください。`;
+
+    setPlayers(updatedPlayers);
+    setDrawPile(newDrawPile);
     setTurnPlayerIndex(nextIndex);
-    setTurnNumber((prev) => prev + 1);
-    setGamePhase('PLAYER_TURN_DRAW');
+    setTurnNumber(nextTurnNum);
+    setChallengerId(nextPlayer.id);
+    setDefenderId(null);
+    setChallengerCard(null);
+    setDefenderCard(null);
+    setBattleReveal(false);
+    setBattleRecord(null);
+    setSelectedHandCard(null);
+    setWaitingForBattleNext(false);
+    setTurnInstruction(nextInstruction);
+    setGamePhase('SELECT_PLAY_CARD');
+
+    sound.playCardDraw();
+    addLog(`${nextPlayer.name} のターン：山札からカードを1枚引きました。`, 'turn');
+
+    if (isOnlineMatch) {
+      syncToOnline({
+        players: updatedPlayers,
+        drawPile: newDrawPile,
+        turnPlayerIndex: nextIndex,
+        turnNumber: nextTurnNum,
+        challengerId: nextPlayer.id,
+        defenderId: null,
+        challengerCard: null,
+        defenderCard: null,
+        battleReveal: false,
+        battleRecord: null,
+        waitingForBattleNext: false,
+        turnInstruction: nextInstruction,
+        gamePhase: 'SELECT_PLAY_CARD',
+      });
+    }
   };
 
   // Resolve Human Effect Interactions
@@ -778,6 +989,15 @@ export default function App() {
     setPlayers(updatedPlayers);
     setEffectInteraction(null);
     setWaitingForBattleNext(true);
+
+    if (isOnlineMatch) {
+      syncToOnline({
+        players: updatedPlayers,
+        drawPile,
+        effectInteraction: null,
+        waitingForBattleNext: true,
+      });
+    }
   };
 
   const handleSelectInteractionPlayer = (targetPlayer: Player) => {
@@ -791,9 +1011,45 @@ export default function App() {
     setPlayers(updatedPlayers);
     setEffectInteraction(null);
     setWaitingForBattleNext(true);
+
+    if (isOnlineMatch) {
+      syncToOnline({
+        players: updatedPlayers,
+        effectInteraction: null,
+        waitingForBattleNext: true,
+      });
+    }
   };
 
-  const humanPlayer = players.find((p) => p.type === 'human') || players[0];
+  // Helper to copy room invite link
+  const handleCopyRoomLink = () => {
+    if (!onlineRoomCode) return;
+    sound.playClick();
+    const url = `${window.location.origin}${window.location.pathname}?room=${onlineRoomCode}`;
+    navigator.clipboard.writeText(url);
+    addLog(`招待リンクをコピーしました: ${url}`, 'special');
+  };
+
+  // Handle Game Restart / Rematch
+  const handleRestartGame = async () => {
+    if (isOnlineMatch && onlineRoomId) {
+      sound.playBattleStart();
+      const roomPlayers: RoomPlayer[] = players.map((p, idx) => ({
+        id: p.id,
+        name: p.name,
+        avatarSeed: p.avatarSeed,
+        isHost: idx === 0,
+        ready: true,
+      }));
+      await rematchOnlineGame(onlineRoomId, roomPlayers);
+    } else {
+      setGamePhase('TITLE');
+    }
+  };
+
+  const humanPlayer = isOnlineMatch && myOnlinePlayerId
+    ? (players.find((p) => p.id === myOnlinePlayerId) || players[0])
+    : (players.find((p) => p.type === 'human') || players[0]);
   const opponents = players.filter((p) => p.id !== humanPlayer?.id);
 
   // Turn checks for Human Player
@@ -814,7 +1070,13 @@ export default function App() {
         onOpenCodex={() => setIsCodexOpen(true)}
         onOpenRules={() => setIsRulesOpen(true)}
         onOpenLog={() => setIsLogOpen(true)}
-        onNewGame={() => setGamePhase('TITLE')}
+        onNewGame={() => {
+          setIsOnlineMatch(false);
+          setOnlineRoomId(null);
+          setGamePhase('TITLE');
+        }}
+        onlineRoomCode={isOnlineMatch ? onlineRoomCode : undefined}
+        onCopyRoomCode={handleCopyRoomLink}
       />
 
       {/* Main Viewport */}
@@ -824,6 +1086,7 @@ export default function App() {
             onStartGame={handleStartGame}
             onOpenRules={() => setIsRulesOpen(true)}
             onOpenCodex={() => setIsCodexOpen(true)}
+            onOpenOnline={() => setIsOnlineModalOpen(true)}
           />
         ) : (
           <div className="w-full flex-1 flex flex-col justify-between gap-4">
@@ -913,9 +1176,28 @@ export default function App() {
         players={players}
         instantWinWinnerId={instantWinWinnerId}
         instantWinReason={instantWinReason}
-        onRestart={() => setGamePhase('TITLE')}
+        onRestart={handleRestartGame}
         onOpenCodex={() => setIsCodexOpen(true)}
       />
+
+      {/* Online Lobby Modal */}
+      <OnlineLobbyModal
+        isOpen={isOnlineModalOpen}
+        onClose={() => setIsOnlineModalOpen(false)}
+        onGameStarted={handleOnlineGameStarted}
+        initialRoomCode={initialRoomCode}
+      />
+
+      {/* Floating Reaction Stamps in Online Mode */}
+      {isOnlineMatch && onlineRoomId && humanPlayer && (
+        <ReactionOverlay
+          reactions={onlineReactions}
+          onSendReaction={(text) => {
+            sendOnlineReaction(onlineRoomId, humanPlayer.id, humanPlayer.name, text);
+          }}
+          myPlayerId={humanPlayer.id}
+        />
+      )}
 
     </div>
   );
