@@ -11,6 +11,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '手札保持でゲーム終了時 +10pt',
     lore: '天照大御神。太陽を司る至高の神。手に抱き続けることで絶大な光と加護をもたらす。',
     flavorQuote: '我が御光の前に闇は平伏す。',
+    imageUrl: '/cards/A.jpg',
   },
   B: {
     letter: 'B',
@@ -22,6 +23,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '魔王(D)に勝てば即座に完全勝利！',
     lore: '光の聖剣を携えし伝説の勇者。宿敵・魔王を討ち果たす宿命を背負う。',
     flavorQuote: '宿敵よ、今こそ因縁に終止符を打つ！',
+    imageUrl: '/cards/B.jpg',
   },
   C: {
     letter: 'C',
@@ -33,6 +35,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '手札保持でゲーム終了時 +5pt',
     lore: '純粋な魔力結晶から生まれた幻の古龍。秘匿されるほど財宝としての価値が高まる。',
     flavorQuote: '透き通る鱗は太古の記憶を宿す。',
+    imageUrl: '/cards/C.jpg',
   },
   D: {
     letter: 'D',
@@ -44,6 +47,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '戦闘後、ゲームを強制終了させる',
     lore: '暗黒街を支配する冥府の覇王。その出現は世界の終焉の号砲となる。',
     flavorQuote: '我が一撃で、この世界を幕引きとしてやろう。',
+    imageUrl: '/cards/D.jpg',
   },
   E: {
     letter: 'E',
@@ -55,6 +59,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '帝国の最高権力者。敗北を糧に次の兵力を即座に補給する。',
     flavorQuote: '一戦の敗北など、帝国の再建を遅らせるに過ぎぬ。',
+    imageUrl: '/cards/E.jpg',
   },
   F: {
     letter: 'F',
@@ -66,6 +71,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：相手の得点にせず手札に生還 (1度のみ)',
     lore: '灰の中から何度でも甦る不死の焔鳥。自らが捕虜となることを許さない。',
     flavorQuote: '燃え盛る業火より、私は再び羽ばたく。',
+    imageUrl: '/cards/F.jpg',
   },
   G: {
     letter: 'G',
@@ -77,6 +83,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '勝利時：自身を対象とする相手効果を完全無効化',
     lore: '聖堂の屋根を守護する石造の魔獣。相手の小細工や強奪を石の皮膚で弾き返す。',
     flavorQuote: '石の意志は如何なる呪詛も寄せ付けぬ。',
+    imageUrl: '/cards/G.jpg',
   },
   H: {
     letter: 'H',
@@ -88,6 +95,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '首を斬られても二本の首が生える多頭の大蛇。倒されるたびに新たな力を生む。',
     flavorQuote: '我が首を断てると思うか？',
+    imageUrl: '/cards/H.jpg',
   },
   I: {
     letter: 'I',
@@ -99,6 +107,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '古代の鍛冶魔術で鋳造された鋼鉄の巨兵。砕かれても直ちに増援が配備される。',
     flavorQuote: '重厚なる鉄壁、崩れてなお補給を呼ぶ。',
+    imageUrl: '/cards/I.jpg',
   },
   J: {
     letter: 'J',
@@ -110,6 +119,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：他全員の手札から1枚奪って自分の得点に！',
     lore: '魂を狩り集める冷徹な死神。倒された時こそ、他者の命運を奪い去る。',
     flavorQuote: '負けたのではない、お前たちの魂を刈りに来たのだ。',
+    imageUrl: '/cards/J.jpg',
   },
   K: {
     letter: 'K',
@@ -121,6 +131,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '徳ある者のもとに舞い降りる幻獣。災厄に見舞われても天の恵みをもたらす。',
     flavorQuote: '天翔ける雷光が新たな運命を導く。',
+    imageUrl: '/cards/K.jpg',
   },
   L: {
     letter: 'L',
@@ -132,6 +143,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：全員の手札と山札を合体リシャッフル！',
     lore: '深淵の海を統べる大怪獣。混沌の大渦を巻き起こし、盤面を白紙に戻す。',
     flavorQuote: '渦潮よ、すべてを混沌の深海へ巻き込め！',
+    imageUrl: '/cards/L.jpg',
   },
   M: {
     letter: 'M',
@@ -143,6 +155,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '迷宮の奥底に潜む牛頭の狂戦士。退けられても迷宮から新たな獲物を掘り起こす。',
     flavorQuote: '迷いし者よ、我が斧の錆となれ。',
+    imageUrl: '/cards/M.jpg',
   },
   N: {
     letter: 'N',
@@ -154,6 +167,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '清らかな泉や森に宿る妖精。ピンチの際に森の秘宝を手渡してくれる。',
     flavorQuote: '森のささやきが、新しい力を授けてくれるわ。',
+    imageUrl: '/cards/N.jpg',
   },
   O: {
     letter: 'O',
@@ -165,6 +179,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：対戦相手の手札を覗き見る',
     lore: '狡猾な知恵を備えた怪力無双の鬼。敗北の痛みを耐え、相手の懐を暴き立てる。',
     flavorQuote: 'フン、お前の手のうちは丸見えだぞ！',
+    imageUrl: '/cards/O.jpg',
   },
   P: {
     letter: 'P',
@@ -176,6 +191,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：対戦相手の手札を全員に白日の下に公開',
     lore: '王室の若き継承者。王家の告発力をもって相手の策謀を公衆の前に曝け出す。',
     flavorQuote: '不正を暴き、民衆の前に真実を明らかにしよう！',
+    imageUrl: '/cards/P.jpg',
   },
   Q: {
     letter: 'Q',
@@ -187,6 +203,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：任意の1人を指名して手札を全員公開させる',
     lore: '宮廷を牛耳る冷徹な王妃。敗北に動じることなく、標的の秘密を白日の下に晒す。',
     flavorQuote: '私の威光に隠し事は許されません。すべてを見せなさい。',
+    imageUrl: '/cards/Q.jpg',
   },
   R: {
     letter: 'R',
@@ -198,6 +215,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '勝利時：世界の序列が逆転！(Zが最強、Aが最弱へ)',
     lore: '旧体制の打倒を叫ぶ変革者。弱者が強者を討ち果たす新秩序を創り出す。',
     flavorQuote: '今日より弱者が支配者だ！ 革命の旗を掲げよ！',
+    imageUrl: '/cards/R.jpg',
   },
   S: {
     letter: 'S',
@@ -209,6 +227,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札から1枚ドロー',
     lore: '前線を支える不屈の歩兵。倒れても後続の部隊が即座に戦線へ合流する。',
     flavorQuote: '倒れても仲間が続く。我が軍の行進は止まらない！',
+    imageUrl: '/cards/S.jpg',
   },
   T: {
     letter: 'T',
@@ -220,6 +239,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：生存する全員の手札をすべて覗き見る',
     lore: '巨躯を誇る洞窟の主。殴り倒された怒りで周囲全員の手札を凝視する。',
     flavorQuote: 'オレを怒らせたな…全員の持ち物見せろ！',
+    imageUrl: '/cards/T.jpg',
   },
   U: {
     letter: 'U',
@@ -231,6 +251,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '勝利時：この戦闘に関わる全カード効果を完全無効化',
     lore: '角に浄化の奇跡を秘めた聖獣。勝利した瞬間、あらゆる魔術的効果を無に帰す。',
     flavorQuote: '清浄なる角よ、一切の邪なる呪法を祓え。',
+    imageUrl: '/cards/U.jpg',
   },
   V: {
     letter: 'V',
@@ -242,6 +263,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：対戦相手の手札を見て1枚強奪して自分の手札へ！',
     lore: '夜を支配する吸血貴族。敗れた獲物の血肉と手札を啜り、我が物とする。',
     flavorQuote: 'その手札の力…我が身の糧として頂こう。',
+    imageUrl: '/cards/V.jpg',
   },
   W: {
     letter: 'W',
@@ -253,6 +275,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：山札を全確認して好きなカードを1枚サーチ！',
     lore: '月夜に狂気と野生を覚醒させる人狼。敗走の最中に群れの秘奥から最強の獲物を嗅ぎつける。',
     flavorQuote: 'ウォォォン！ 山札の奥底から獲物を引きずり出してやる！',
+    imageUrl: '/cards/W.jpg',
   },
   X: {
     letter: 'X',
@@ -264,6 +287,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '敗北時：他全員の手札を見て好きなカードを1枚強奪！',
     lore: '時空を超えて迷い込んだ異世界からの転生者。この世の掟を無視して他者の秘奥を掠め取る。',
     flavorQuote: 'この世界のルール、僕のチート能力で書き換えるよ。',
+    imageUrl: '/cards/X.jpg',
   },
   Y: {
     letter: 'Y',
@@ -275,6 +299,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: 'Zero(Z)に勝利すると即座にゲーム完全勝利！',
     lore: '名もなき未熟な青年。何者でもないゼロの虚無に打ち勝つ時、奇跡の戴冠を果たす。',
     flavorQuote: '何もないゼロになんて、絶対に負けない！',
+    imageUrl: '/cards/Y.jpg',
   },
   Z: {
     letter: 'Z',
@@ -286,6 +311,7 @@ export const CARD_DATABASE: Record<Letter, CardData> = {
     shortEffect: '効果なし (革命時は最強カードに！)',
     lore: '始まりにして終わり、虚無の象徴。通常は最弱だが、革命の嵐が吹き荒れる時、頂点に君臨する。',
     flavorQuote: '無から生まれ、無へと還る。',
+    imageUrl: '/cards/Z.jpg',
   },
 };
 
