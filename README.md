@@ -1,17 +1,20 @@
-# カード画像格納フォルダ (Card Images Folder)
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-ここに用意したカードのイラスト画像（.png, .jpg, .webp など）を配置してください。
+# Run and deploy your AI Studio app
 
-### おすすめの命名例（簡単ルール）:
-- A.png（または A.jpg）
-- B.png
-- C.png
-...
-- Z.png
+This contains everything you need to run your app locally.
 
-### 指定方法:
-`src/data/cards.ts` の各カードの `imageUrl` に `/cards/ファイル名` を記載します。
-例:
-```ts
-imageUrl: '/cards/A.png',
-```
+View your app in AI Studio: https://ai.studio/apps/cb3e0bf2-0303-42d1-a4c6-b50bc9c9206f
+
+## Run Locally
+
+**Prerequisites:**  Node.js
+
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
