@@ -18,14 +18,6 @@ export interface RoomPlayer {
   ready: boolean;
 }
 
-export interface ReactionStamp {
-  id: string;
-  playerId: string;
-  playerName: string;
-  text: string;
-  timestamp: number;
-}
-
 export interface OnlineGameState {
   players: Player[];
   turnPlayerIndex: number;
@@ -46,7 +38,6 @@ export interface OnlineGameState {
   turnInstruction: string;
   effectInteraction: EffectInteractionState | null;
   gameLogs: GameLogEntry[];
-  reactions: ReactionStamp[];
 }
 
 export interface OnlineRoomData {
@@ -202,7 +193,6 @@ export async function startOnlineGame(roomId: string, players: RoomPlayer[]): Pr
         timestamp: Date.now(),
       },
     ],
-    reactions: [],
   };
 
   try {
@@ -226,39 +216,6 @@ export async function syncOnlineGameState(roomId: string, gameState: OnlineGameS
   try {
     await updateDoc(doc(db, 'rooms', roomId), {
       gameState,
-      updatedAt: new Date().toISOString(),
-    });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, `rooms/${roomId}`);
-  }
-}
-
-// Send reaction stamp
-export async function sendOnlineReaction(
-  roomId: string,
-  playerId: string,
-  playerName: string,
-  text: string
-): Promise<void> {
-  try {
-    const docRef = doc(db, 'rooms', roomId);
-    const snap = await getDoc(docRef);
-    if (!snap.exists()) return;
-
-    const data = snap.data() as OnlineRoomData;
-    if (!data.gameState) return;
-
-    const stamp: ReactionStamp = {
-      id: Math.random().toString(36).substring(2, 9),
-      playerId,
-      playerName,
-      text,
-      timestamp: Date.now(),
-    };
-
-    const currentReactions = (data.gameState.reactions || []).slice(-8); // keep last 8
-    await updateDoc(docRef, {
-      'gameState.reactions': [...currentReactions, stamp],
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {

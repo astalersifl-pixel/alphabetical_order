@@ -30,15 +30,12 @@ import { LogModal } from './components/LogModal';
 import { GameOverModal } from './components/GameOverModal';
 import { EffectModal } from './components/EffectModal';
 import { OnlineLobbyModal } from './components/OnlineLobbyModal';
-import { ReactionOverlay } from './components/ReactionOverlay';
 import {
   OnlineGameState,
   OnlineRoomData,
-  ReactionStamp,
   RoomPlayer,
   subscribeToRoom,
   syncOnlineGameState,
-  sendOnlineReaction,
   rematchOnlineGame,
 } from './utils/onlineGame';
 
@@ -59,7 +56,6 @@ export default function App() {
   const [onlineRoomCode, setOnlineRoomCode] = useState<string>('');
   const [myOnlinePlayerId, setMyOnlinePlayerId] = useState<string | null>(null);
   const [isOnlineMatch, setIsOnlineMatch] = useState<boolean>(false);
-  const [onlineReactions, setOnlineReactions] = useState<ReactionStamp[]>([]);
   const isRemoteSyncRef = useRef<boolean>(false);
 
   // Battle State
@@ -125,7 +121,6 @@ export default function App() {
       turnInstruction,
       effectInteraction,
       gameLogs,
-      reactions: onlineReactions,
       ...override,
     };
     syncOnlineGameState(onlineRoomId, fullState);
@@ -170,7 +165,6 @@ export default function App() {
       setTurnInstruction(s.turnInstruction);
       setEffectInteraction(s.effectInteraction);
       setGameLogs(s.gameLogs || []);
-      setOnlineReactions(s.reactions || []);
     });
 
     return () => unsubscribe();
@@ -1187,17 +1181,6 @@ export default function App() {
         onGameStarted={handleOnlineGameStarted}
         initialRoomCode={initialRoomCode}
       />
-
-      {/* Floating Reaction Stamps in Online Mode */}
-      {isOnlineMatch && onlineRoomId && humanPlayer && (
-        <ReactionOverlay
-          reactions={onlineReactions}
-          onSendReaction={(text) => {
-            sendOnlineReaction(onlineRoomId, humanPlayer.id, humanPlayer.name, text);
-          }}
-          myPlayerId={humanPlayer.id}
-        />
-      )}
 
     </div>
   );
