@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { CardData, EffectInteractionState, Player } from '../types/game';
 import { CardView } from './CardView';
 import { sound } from '../utils/audio';
-import { Eye, Hand, Sparkles, Check, Hourglass, ShieldAlert } from 'lucide-react';
+import { Eye, Hand, Sparkles, Check, Hourglass, ShieldAlert, Skull } from 'lucide-react';
 
 interface EffectModalProps {
   interaction: EffectInteractionState | null;
@@ -170,16 +170,19 @@ export const EffectModal: React.FC<EffectModalProps> = ({
               </div>
             )}
 
-            {/* Queen Select Player */}
-            {interaction.type === 'QUEEN_SELECT_PLAYER' && interaction.candidatePlayers && (
+            {/* Queen & Joker Select Player */}
+            {(interaction.type === 'QUEEN_SELECT_PLAYER' || interaction.type === 'JOKER_SELECT_PLAYER') && interaction.candidatePlayers && (
               <div className="flex flex-col gap-4">
-                <p className="text-xs text-purple-300 font-serif-jp">
-                  手札を全員に公開させたいプレイヤーを指名してください：
+                <p className={`text-xs font-serif-jp ${interaction.type === 'JOKER_SELECT_PLAYER' ? 'text-rose-300' : 'text-purple-300'}`}>
+                  {interaction.type === 'JOKER_SELECT_PLAYER'
+                    ? '手札からランダムに1枚奪って自分の得点にするプレイヤーを1人選択してください：'
+                    : '手札を全員に公開させたいプレイヤーを指名してください：'}
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-950/60 rounded-xl border border-purple-900/40">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-950/60 rounded-xl border border-stone-800">
                   {interaction.candidatePlayers.map((player) => {
                     const isSelected = selectedPlayer?.id === player.id;
+                    const isJoker = interaction.type === 'JOKER_SELECT_PLAYER';
                     return (
                       <div
                         key={player.id}
@@ -189,8 +192,10 @@ export const EffectModal: React.FC<EffectModalProps> = ({
                         }}
                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${
                           isSelected
-                            ? 'border-purple-400 bg-purple-950/40 ring-2 ring-purple-400/40'
-                            : 'border-slate-800 bg-slate-900 hover:border-purple-800'
+                            ? isJoker
+                              ? 'border-rose-500 bg-rose-950/40 ring-2 ring-rose-500/40'
+                              : 'border-purple-400 bg-purple-950/40 ring-2 ring-purple-400/40'
+                            : 'border-slate-800 bg-slate-900 hover:border-stone-600'
                         }`}
                       >
                         <div>
@@ -201,10 +206,21 @@ export const EffectModal: React.FC<EffectModalProps> = ({
                             手札: {player.hand.length}枚 · 得点: {player.score}pt
                           </span>
                         </div>
-                        {isSelected && <Check className="w-5 h-5 text-purple-400" />}
+                        {isSelected && (
+                          isJoker ? (
+                            <Skull className="w-5 h-5 text-rose-400" />
+                          ) : (
+                            <Check className="w-5 h-5 text-purple-400" />
+                          )
+                        )}
                       </div>
                     );
                   })}
+                  {interaction.candidatePlayers.length === 0 && (
+                    <div className="text-stone-500 text-sm py-4 col-span-2 text-center">
+                      対象となるプレイヤーがいません
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3 pt-2">
@@ -216,10 +232,23 @@ export const EffectModal: React.FC<EffectModalProps> = ({
                         onSelectPlayer(selectedPlayer);
                       }
                     }}
-                    className="px-6 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-md"
+                    className={`px-6 py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm transition-colors flex items-center gap-2 cursor-pointer shadow-md ${
+                      interaction.type === 'JOKER_SELECT_PLAYER'
+                        ? 'bg-rose-600 hover:bg-rose-500'
+                        : 'bg-purple-600 hover:bg-purple-500'
+                    }`}
                   >
-                    <Eye className="w-4 h-4" />
-                    このプレイヤーの手札を全員に公開する
+                    {interaction.type === 'JOKER_SELECT_PLAYER' ? (
+                      <>
+                        <Skull className="w-4 h-4" />
+                        <span>このプレイヤーからランダムに1枚奪ってポイントにする</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4" />
+                        <span>このプレイヤーの手札を全員に公開する</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
