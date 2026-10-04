@@ -666,10 +666,35 @@ export default function App() {
           break;
 
         // Joker (J):
-        // "バトルに負けた場合、全員の手札からカードを見ずに1枚指定して捨てさせ自分のポイントに加える。"
+        // "バトルに負けた場合、プレイヤーを選ぶ。そのプレイヤーからランダムに1枚選び自分のポイントにする。"
         case 'J':
-          effects.push('死神の効果：他プレイヤーの手札から1枚ずつ奪って自らの得点に！');
-          addLog(`${loser.name} の死神が鎌を振るい、他プレイヤーの手札を狩り取ります！`, 'effect');
+          const jokerCandidates = currentPlayers.filter(
+            (p) => p.id !== loser.id && p.hand.length > 0 && !(isGargoyleImmune && p.id === winner.id)
+          );
+
+          if (jokerCandidates.length > 0) {
+            effects.push('死神の効果：プレイヤーを1人選び手札からランダムに1枚奪って自分の得点に！');
+            if (loser.type === 'human') {
+              interactionNeeded = {
+                type: 'JOKER_SELECT_PLAYER',
+                actorPlayerId: loser.id,
+                candidatePlayers: jokerCandidates,
+                description: '死神の力：手札からランダムに1枚奪って自分の得点にするプレイヤーを1人選択してください。',
+              };
+            } else {
+              // CPU selects the player with the highest score
+              const target = jokerCandidates.sort((a, b) => b.score - a.score)[0];
+              if (target && target.hand.length > 0) {
+                const randomIndex = Math.floor(Math.random() * target.hand.length);
+                const stolenCard = target.hand.splice(randomIndex, 1)[0];
+                loser.capturedCards.push(stolenCard);
+                loser.score += stolenCard.points;
+                addLog(`${loser.name} の死神は ${target.name} の手札からランダムに「${stolenCard.japaneseName}」を刈り取り、自分の得点（+${stolenCard.points}pt）としました！`, 'effect');
+              }
+            }
+          } else {
+            addLog(`${loser.name} の死神が鎌を振るいましたが、手札を持つ対象がいませんでした。`, 'effect');
+          }
           break;
 
         // Leviathan (L):
@@ -823,19 +848,6 @@ export default function App() {
           }
         });
       }
-    }
-
-    // Apply Joker hand steal discard
-    if (!isUnicornNegated && loserCard.letter === 'J') {
-      currentPlayers.forEach((p) => {
-        if (p.id !== loser.id && p.hand.length > 0 && !(isGargoyleImmune && p.id === winner.id)) {
-          const randomIndex = Math.floor(Math.random() * p.hand.length);
-          const discarded = p.hand.splice(randomIndex, 1)[0];
-          loser.capturedCards.push(discarded);
-          loser.score += discarded.points;
-          addLog(`${loser.name} の死神は ${p.name} の手札から「${discarded.japaneseName}」を刈り取り、自分の得点としました！`, 'effect');
-        }
-      });
     }
 
     // Apply Leviathan hand shuffle
@@ -1072,11 +1084,25 @@ export default function App() {
     }
 
     const updatedPlayers = [...players];
+    const actor = updatedPlayers.find((p) => p.id === effectInteraction.actorPlayerId);
     const target = updatedPlayers.find((p) => p.id === targetPlayer.id);
-    if (target) {
-      target.isRevealedToAll = true;
-      addLog(`女王の指名により、${target.name} の手札が全員に公開されました！`, 'effect');
+
+    if (effectInteraction.type === 'QUEEN_SELECT_PLAYER') {
+      if (target) {
+        target.isRevealedToAll = true;
+        addLog(`女王の指名により、${target.name} の手札が全員に公開されました！`, 'effect');
+      }
+    } else if (effectInteraction.type === 'JOKER_SELECT_PLAYER') {
+      if (actor && target && target.hand.length > 0) {
+        const randomIndex = Math.floor(Math.random() * target.hand.length);
+        const stolenCard = target.hand.splice(randomIndex, 1)[0];
+        actor.capturedCards.push(stolenCard);
+        actor.score += stolenCard.points;
+        sound.playVictory();
+        addLog(`${actor.name} は死神の力で ${target.name} の手札からランダムに「${stolenCard.japaneseName}」を刈り取り、自らの得点（+${stolenCard.points}pt）としました！`, 'effect');
+      }
     }
+
     setPlayers(updatedPlayers);
     setEffectInteraction(null);
     setWaitingForBattleNext(true);
