@@ -114,6 +114,40 @@ export const CardView: React.FC<CardViewProps> = ({
 
   const theme = getThemeStyles();
 
+  const [imgAttempt, setImgAttempt] = React.useState<number>(0);
+  const [imgFailed, setImgFailed] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    setImgAttempt(0);
+    setImgFailed(false);
+  }, [card?.letter, card?.imageUrl]);
+
+  const candidateSources = React.useMemo(() => {
+    if (!card) return [];
+    const list: string[] = [];
+    if (card.imageUrl) list.push(card.imageUrl);
+    list.push(`/cards/${card.letter}.jpg`);
+    list.push(`/${card.letter}.jpg`);
+    list.push(`/cards/${card.letter}.png`);
+    list.push(`/${card.letter}.png`);
+    list.push(`/cards/${card.letter.toLowerCase()}.jpg`);
+    list.push(`/${card.letter.toLowerCase()}.jpg`);
+    list.push(`/cards/${card.letter.toLowerCase()}.png`);
+    list.push(`/${card.letter.toLowerCase()}.png`);
+    return Array.from(new Set(list));
+  }, [card?.imageUrl, card?.letter]);
+
+  const currentImageSrc =
+    !imgFailed && imgAttempt < candidateSources.length ? candidateSources[imgAttempt] : null;
+
+  const handleImageError = () => {
+    if (imgAttempt + 1 < candidateSources.length) {
+      setImgAttempt((prev) => prev + 1);
+    } else {
+      setImgFailed(true);
+    }
+  };
+
   return (
     <div
       onClick={!disabled && onClick ? onClick : undefined}
@@ -158,7 +192,7 @@ export const CardView: React.FC<CardViewProps> = ({
       </div>
 
       {/* Center Body: Names & Artwork/Symbol */}
-      <div className="my-auto z-10 flex flex-col items-center text-center px-0.5">
+      <div className="my-auto z-10 flex flex-col items-center text-center px-0.5 w-full">
         <h4 className="font-serif-jp text-xs sm:text-sm font-bold text-white tracking-wide truncate max-w-full">
           {card.japaneseName}
         </h4>
@@ -166,9 +200,26 @@ export const CardView: React.FC<CardViewProps> = ({
           {card.name}
         </span>
 
+        {/* Optional Artwork Image Frame */}
+        {size !== 'mini' && currentImageSrc && (
+          <div
+            className={`mt-1 w-full overflow-hidden rounded-md border border-white/20 shadow-inner bg-slate-950 flex items-center justify-center shrink-0 ${
+              size === 'lg' ? 'h-24 sm:h-28' : size === 'md' ? 'h-14 sm:h-16' : 'h-8'
+            }`}
+          >
+            <img
+              src={currentImageSrc}
+              alt={card.japaneseName}
+              onError={handleImageError}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        )}
+
         {size !== 'mini' && (
-          <div className="mt-1.5 w-full bg-slate-950/70 rounded p-1 sm:p-1.5 border border-white/10 text-left">
-            <p className="text-[10px] sm:text-[11px] text-stone-200 leading-tight line-clamp-3">
+          <div className="mt-1 w-full bg-slate-950/70 rounded p-1 sm:p-1.5 border border-white/10 text-left">
+            <p className="text-[9px] sm:text-[10px] text-stone-200 leading-tight line-clamp-2 sm:line-clamp-3">
               {card.shortEffect}
             </p>
           </div>
