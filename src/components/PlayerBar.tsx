@@ -1,7 +1,7 @@
 import React from 'react';
 import { CardData, Player } from '../types/game';
 import { CardView } from './CardView';
-import { Crown, Swords, Eye, Trophy, ShieldCheck } from 'lucide-react';
+import { Crown, Swords, Eye, Trophy, ShieldCheck, HelpCircle } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface OpponentsBarProps {
@@ -139,6 +139,7 @@ interface CurrentPlayerHandProps {
   onConfirmPlayCard: () => void;
   turnInstruction: string;
   onInspectPlayer: (player: Player, tab: 'captured' | 'used') => void;
+  onOpenRules?: () => void;
 }
 
 export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
@@ -150,6 +151,7 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   onConfirmPlayCard,
   turnInstruction,
   onInspectPlayer,
+  onOpenRules,
 }) => {
   return (
     <div className="w-full max-w-5xl mx-auto rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 bg-slate-950/90 border border-amber-900/50 shadow-2xl backdrop-blur-md flex flex-col items-center box-border overflow-hidden">
@@ -173,7 +175,7 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
             </h3>
             
             {/* Clickable Public Info Chips */}
-            <div className="flex items-center gap-2 text-xs font-mono mt-1">
+            <div className="flex items-center gap-2 text-xs font-mono mt-1 flex-wrap">
               <span className="text-stone-400">手札: {player.hand.length}枚</span>
               <span className="text-stone-600">·</span>
 
@@ -204,6 +206,24 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
                 <ShieldCheck className="w-3 h-3 text-sky-400" />
                 <span>使用済: {player.usedCards.length}枚</span>
               </button>
+
+              {onOpenRules && (
+                <>
+                  <span className="text-stone-600">·</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      onOpenRules();
+                    }}
+                    className="px-2 py-0.5 rounded bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/30 text-amber-300 hover:text-amber-200 transition-colors flex items-center gap-1 cursor-pointer"
+                    title="バトル中にルールを確認"
+                  >
+                    <HelpCircle className="w-3 h-3 text-amber-400" />
+                    <span>ルール確認</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
