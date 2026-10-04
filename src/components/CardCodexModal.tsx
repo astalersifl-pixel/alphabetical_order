@@ -34,7 +34,7 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
   onOpenRules,
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [activeFilterId, setActiveFilterId] = useState<string>('all');
   const [selectedCard, setSelectedCard] = useState<CardData>(CARD_DATABASE.A);
   const [zoomedCard, setZoomedCard] = useState<CardData | null>(null);
 
@@ -59,15 +59,26 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
 
   const filteredCards = cards.filter((card) => {
     const matchesSearch =
+      !search ||
       card.letter.toLowerCase().includes(search.toLowerCase()) ||
       card.name.toLowerCase().includes(search.toLowerCase()) ||
       card.japaneseName.includes(search) ||
       card.description.includes(search);
 
-    const matchesCategory =
-      selectedCategory === 'all' || card.category === selectedCategory;
+    let matchesFilter = true;
+    if (activeFilterId === 'special_wins') {
+      matchesFilter = ['B', 'Y'].includes(card.letter);
+    } else if (activeFilterId === 'end_game') {
+      matchesFilter = ['D'].includes(card.letter);
+    } else if (activeFilterId === 'hand_bonus') {
+      matchesFilter = ['A', 'C'].includes(card.letter);
+    } else if (activeFilterId === 'draw_on_loss') {
+      matchesFilter = ['E', 'H', 'I', 'K', 'M', 'N', 'S'].includes(card.letter);
+    } else if (activeFilterId === 'steal') {
+      matchesFilter = ['J', 'V', 'X'].includes(card.letter);
+    }
 
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesFilter;
   });
 
   // Navigate to previous/next card in zoomed overlay
@@ -163,36 +174,25 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
               { id: 'hand_bonus', label: '手札加点 (A, C)' },
               { id: 'draw_on_loss', label: '敗北ドロー' },
               { id: 'steal', label: '手札強奪 (J, V, X)' },
-            ].map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => {
-                  sound.playClick();
-                  if (filter.id === 'special_wins') {
-                    setSearch('勝利する');
-                    setSelectedCategory('all');
-                  } else if (filter.id === 'end_game') {
-                    setSearch('ゲームを終了');
-                    setSelectedCategory('all');
-                  } else if (filter.id === 'hand_bonus') {
-                    setSearch('手札にあった場合');
-                    setSelectedCategory('all');
-                  } else if (filter.id === 'draw_on_loss') {
-                    setSearch('1枚ドロー');
-                    setSelectedCategory('all');
-                  } else if (filter.id === 'steal') {
-                    setSearch('加える');
-                    setSelectedCategory('all');
-                  } else {
-                    setSearch('');
-                    setSelectedCategory('all');
-                  }
-                }}
-                className="px-2 py-1 rounded bg-slate-800/80 hover:bg-amber-950/60 border border-amber-900/30 text-stone-300 hover:text-amber-300 transition-colors whitespace-nowrap"
-              >
-                {filter.label}
-              </button>
-            ))}
+            ].map((filter) => {
+              const isActive = activeFilterId === filter.id;
+              return (
+                <button
+                  key={filter.id}
+                  onClick={() => {
+                    sound.playClick();
+                    setActiveFilterId(filter.id);
+                  }}
+                  className={`px-2.5 py-1 rounded text-xs font-serif-jp transition-colors whitespace-nowrap cursor-pointer ${
+                    isActive
+                      ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+                      : 'bg-slate-800/80 hover:bg-amber-950/60 border border-amber-900/30 text-stone-300 hover:text-amber-300'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
