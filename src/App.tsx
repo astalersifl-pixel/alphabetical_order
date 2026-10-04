@@ -1166,6 +1166,7 @@ export default function App() {
               onContinue={handleAdvanceTurn}
               waitingForPlayerAction={waitingForBattleNext}
               onStartClash={handleStartClash}
+              onOpenRules={() => setIsRulesOpen(true)}
             />
 
             {/* Bottom Area: Human Player's Rack */}
@@ -1185,6 +1186,7 @@ export default function App() {
                 }}
                 turnInstruction={turnInstruction}
                 onInspectPlayer={handleOpenInspectPlayer}
+                onOpenRules={() => setIsRulesOpen(true)}
               />
             )}
 
@@ -1206,6 +1208,7 @@ export default function App() {
         onClose={() => setIsCodexOpen(false)}
         isRevolution={isRevolution}
         onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
+        onOpenRules={() => setIsRulesOpen(true)}
       />
 
       {/* Rules Modal */}
