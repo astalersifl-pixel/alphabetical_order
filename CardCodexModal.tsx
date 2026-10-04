@@ -2,19 +2,21 @@ import React, { useState } from 'react';
 import { ALL_LETTERS, CARD_DATABASE } from '../data/cards';
 import { CardCategory, CardData } from '../types/game';
 import { CardView } from './CardView';
-import { X, Search, Shield, Swords, Sparkles, Flame, Eye } from 'lucide-react';
+import { X, Search, Shield, Swords, Sparkles, Flame, Eye, Image as ImageIcon } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface CardCodexModalProps {
   isOpen: boolean;
   onClose: () => void;
   isRevolution?: boolean;
+  onOpenCustomImages?: () => void;
 }
 
 export const CardCodexModal: React.FC<CardCodexModalProps> = ({
   isOpen,
   onClose,
   isRevolution = false,
+  onOpenCustomImages,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -52,15 +54,31 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
             </span>
           </div>
 
-          <button
-            onClick={() => {
-              sound.playClick();
-              onClose();
-            }}
-            className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenCustomImages && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  onOpenCustomImages();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold font-serif-jp flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <ImageIcon className="w-4 h-4 text-amber-400" />
+                <span>自作イラスト設定</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => {
+                sound.playClick();
+                onClose();
+              }}
+              className="p-1.5 text-stone-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Filter & Search Bar */}

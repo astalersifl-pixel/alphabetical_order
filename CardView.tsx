@@ -1,5 +1,6 @@
 import React from 'react';
 import { CardData } from '../types/game';
+import { getCustomCardArtwork } from '../utils/customCardImages';
 
 interface CardViewProps {
   card?: CardData;
@@ -114,17 +115,36 @@ export const CardView: React.FC<CardViewProps> = ({
 
   const theme = getThemeStyles();
 
+  const [customArt, setCustomArt] = React.useState<string | null>(() =>
+    card ? getCustomCardArtwork(card.letter) : null
+  );
+
+  React.useEffect(() => {
+    if (!card) return;
+    setCustomArt(getCustomCardArtwork(card.letter));
+
+    const handleArtUpdate = (e: any) => {
+      if (e?.detail?.all || e?.detail?.letter === card.letter) {
+        setCustomArt(getCustomCardArtwork(card.letter));
+      }
+    };
+
+    window.addEventListener('ao-card-art-updated', handleArtUpdate);
+    return () => window.removeEventListener('ao-card-art-updated', handleArtUpdate);
+  }, [card?.letter]);
+
   const [imgAttempt, setImgAttempt] = React.useState<number>(0);
   const [imgFailed, setImgFailed] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     setImgAttempt(0);
     setImgFailed(false);
-  }, [card?.letter, card?.imageUrl]);
+  }, [card?.letter, card?.imageUrl, customArt]);
 
   const candidateSources = React.useMemo(() => {
     if (!card) return [];
     const list: string[] = [];
+    if (customArt) list.push(customArt);
     if (card.imageUrl) list.push(card.imageUrl);
     list.push(`/cards/${card.letter}.jpg`);
     list.push(`/${card.letter}.jpg`);
@@ -135,7 +155,7 @@ export const CardView: React.FC<CardViewProps> = ({
     list.push(`/cards/${card.letter.toLowerCase()}.png`);
     list.push(`/${card.letter.toLowerCase()}.png`);
     return Array.from(new Set(list));
-  }, [card?.imageUrl, card?.letter]);
+  }, [customArt, card?.imageUrl, card?.letter]);
 
   const currentImageSrc =
     !imgFailed && imgAttempt < candidateSources.length ? candidateSources[imgAttempt] : null;

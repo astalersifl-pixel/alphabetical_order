@@ -31,6 +31,7 @@ import { GameOverModal } from './components/GameOverModal';
 import { EffectModal } from './components/EffectModal';
 import { OnlineLobbyModal } from './components/OnlineLobbyModal';
 import { PublicCardsModal } from './components/PublicCardsModal';
+import { CustomImageModal } from './components/CustomImageModal';
 import {
   OnlineGameState,
   OnlineRoomData,
@@ -89,6 +90,7 @@ export default function App() {
   const [isCodexOpen, setIsCodexOpen] = useState<boolean>(false);
   const [isRulesOpen, setIsRulesOpen] = useState<boolean>(false);
   const [isLogOpen, setIsLogOpen] = useState<boolean>(false);
+  const [isCustomImageModalOpen, setIsCustomImageModalOpen] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [effectInteraction, setEffectInteraction] = useState<EffectInteractionState | null>(null);
   const [gameLogs, setGameLogs] = useState<GameLogEntry[]>([]);
@@ -1112,6 +1114,7 @@ export default function App() {
         onOpenCodex={() => setIsCodexOpen(true)}
         onOpenRules={() => setIsRulesOpen(true)}
         onOpenLog={() => setIsLogOpen(true)}
+        onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
         onNewGame={() => {
           setIsOnlineMatch(false);
           setOnlineRoomId(null);
@@ -1129,6 +1132,7 @@ export default function App() {
             onOpenRules={() => setIsRulesOpen(true)}
             onOpenCodex={() => setIsCodexOpen(true)}
             onOpenOnline={() => setIsOnlineModalOpen(true)}
+            onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
           />
         ) : (
           <div className="w-full flex-1 flex flex-col justify-between gap-4">
@@ -1196,6 +1200,7 @@ export default function App() {
         isOpen={isCodexOpen}
         onClose={() => setIsCodexOpen(false)}
         isRevolution={isRevolution}
+        onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
       />
 
       {/* Rules Modal */}
@@ -1213,6 +1218,12 @@ export default function App() {
         isOpen={isLogOpen}
         onClose={() => setIsLogOpen(false)}
         logs={gameLogs}
+      />
+
+      {/* Custom Card Artworks Modal */}
+      <CustomImageModal
+        isOpen={isCustomImageModalOpen}
+        onClose={() => setIsCustomImageModalOpen(false)}
       />
 
       {/* Game Over Victory Screen */}
