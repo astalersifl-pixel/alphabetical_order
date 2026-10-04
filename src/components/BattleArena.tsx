@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Skull,
+  HelpCircle,
 } from 'lucide-react';
 
 interface BattleArenaProps {
@@ -26,6 +27,7 @@ interface BattleArenaProps {
   onContinue?: () => void;
   waitingForPlayerAction?: boolean;
   onStartClash?: () => void;
+  onOpenRules?: () => void;
 }
 
 export const BattleArena: React.FC<BattleArenaProps> = ({
@@ -41,6 +43,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   onContinue,
   waitingForPlayerAction = false,
   onStartClash,
+  onOpenRules,
 }) => {
   const isChallengerWinner = battleRecord?.winnerId === challenger?.id;
   const isDefenderWinner = battleRecord?.winnerId === defender?.id;
@@ -98,15 +101,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           )}
         </div>
 
-        {/* Deck & Graveyard counter */}
-        <div className="flex items-center gap-2.5 text-xs font-mono text-stone-300">
-          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-amber-900/40 px-2.5 py-1 rounded-lg shadow-sm">
+        {/* Deck & Graveyard counter + Quick Rules button */}
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-mono text-stone-300">
+          {onOpenRules && (
+            <button
+              type="button"
+              onClick={onOpenRules}
+              className="flex items-center gap-1 bg-amber-950/60 hover:bg-amber-900/70 border border-amber-500/50 px-2 py-1 rounded-lg text-amber-300 hover:text-amber-200 text-xs font-serif-jp transition-colors cursor-pointer shadow-sm shrink-0"
+              title="ルール解説を確認"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
+              <span className="font-bold text-[11px]">ルール</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-amber-900/40 px-2 sm:px-2.5 py-1 rounded-lg shadow-sm">
             <span className="text-amber-400 font-bold">山札:</span>
             <span className="tabular-nums font-bold text-stone-100">{deckCount}</span>
             <span className="text-stone-500 text-[11px]">枚</span>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-stone-800 px-2.5 py-1 rounded-lg shadow-sm">
+          <div className="flex items-center gap-1.5 bg-slate-900/80 border border-stone-800 px-2 sm:px-2.5 py-1 rounded-lg shadow-sm">
             <span className="text-stone-400">墓地:</span>
             <span className="tabular-nums text-stone-300">{discardCount}</span>
             <span className="text-stone-500 text-[11px]">枚</span>
