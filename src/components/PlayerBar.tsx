@@ -30,6 +30,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
         const isRevealedToViewer =
           opponent.isRevealedToAll || !!opponent.revealedToPlayers[viewerPlayerId];
         const seatIndex = allPlayers ? allPlayers.findIndex((p) => p.id === opponent.id) : -1;
+        const hasNoHand = opponent.hand.length === 0;
 
         return (
           <div
@@ -38,7 +39,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
               isCurrentTurn
                 ? 'bg-amber-950/40 border-amber-500/70 shadow-lg shadow-amber-950/30 ring-1 ring-amber-400/40'
                 : 'bg-slate-900/80 border-slate-800 shadow-md'
-            }`}
+            } ${isSelectOpponentPhase && hasNoHand ? 'opacity-60 grayscale-[30%]' : ''}`}
           >
             {/* Player Info Row */}
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -56,7 +57,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
                     )}
                     {isCurrentTurn && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                   </h4>
-                  <div className="text-[10px] text-stone-400 font-mono">
+                  <div className={`text-[10px] font-mono ${hasNoHand ? 'text-rose-400 font-bold' : 'text-stone-400'}`}>
                     <span>手札: {opponent.hand.length}枚</span>
                   </div>
                 </div>
@@ -114,22 +115,28 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
                 </div>
               ))}
               {opponent.hand.length === 0 && (
-                <span className="text-xs text-stone-600 italic">手札なし</span>
+                <span className="text-xs text-rose-400/80 font-bold italic">手札なし（0枚）</span>
               )}
             </div>
 
             {/* Challenge Button if selecting opponent */}
             {isSelectOpponentPhase && (
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  onSelectOpponent(opponent);
-                }}
-                className="mt-2.5 w-full py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-serif-jp text-xs font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
-              >
-                <Swords className="w-3.5 h-3.5" />
-                <span>この相手に対戦を挑む</span>
-              </button>
+              !hasNoHand ? (
+                <button
+                  onClick={() => {
+                    sound.playClick();
+                    onSelectOpponent(opponent);
+                  }}
+                  className="mt-2.5 w-full py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-serif-jp text-xs font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>この相手に対戦を挑む</span>
+                </button>
+              ) : (
+                <div className="mt-2.5 w-full py-1.5 bg-slate-900/90 border border-stone-800 text-stone-500 font-serif-jp text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-not-allowed select-none">
+                  <span>手札がないため対戦不可</span>
+                </div>
+              )
             )}
           </div>
         );
