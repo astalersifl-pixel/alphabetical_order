@@ -274,7 +274,13 @@ export default function App() {
       });
     }
 
-    // 3. Deal 3 cards to each player
+    // 3. 席順（手番順）をランダムにシャッフル
+    for (let i = newPlayers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newPlayers[i], newPlayers[j]] = [newPlayers[j], newPlayers[i]];
+    }
+
+    // 4. Deal 3 cards to each player
     newPlayers.forEach((p) => {
       p.hand = deck.splice(0, 3);
     });
@@ -296,11 +302,13 @@ export default function App() {
     setSelectedHandCard(null);
     setEffectInteraction(null);
 
+    const seatOrderText = newPlayers.map((p, idx) => `${idx + 1}番手: ${p.name}`).join(' → ');
+
     setGameLogs([
       {
         id: 'start',
         turn: 1,
-        text: `ゲーム開始！各プレイヤーにカードを3枚配りました。（山札残り: ${deck.length}枚）`,
+        text: `ゲーム開始！席順（ランダム）: [ ${seatOrderText} ]（手番は時計回りに進行します）`,
         type: 'special',
         timestamp: Date.now(),
       },
@@ -968,14 +976,8 @@ export default function App() {
       return;
     }
 
-    // 次はバトルに敗北したプレイヤーの番となる
-    let nextIndex = (turnPlayerIndex + 1) % players.length;
-    if (battleRecord?.loserId) {
-      const loserIndex = players.findIndex((p) => p.id === battleRecord.loserId);
-      if (loserIndex !== -1) {
-        nextIndex = loserIndex;
-      }
-    }
+    // 手番は時計回りに次のプレイヤーへ進む
+    const nextIndex = (turnPlayerIndex + 1) % players.length;
 
     const drawnCard = drawPile[0];
     const newDrawPile = drawPile.slice(1);
@@ -987,7 +989,7 @@ export default function App() {
     };
 
     const nextTurnNum = turnNumber + 1;
-    const nextInstruction = `${nextPlayer.name}（敗北側）の手番です。手札から場に出すカードを選択してください。`;
+    const nextInstruction = `${nextPlayer.name} の手番です。手札から場に出すカードを選択してください。`;
 
     setPlayers(updatedPlayers);
     setDrawPile(newDrawPile);
@@ -1005,7 +1007,7 @@ export default function App() {
     setGamePhase('SELECT_PLAY_CARD');
 
     sound.playCardDraw();
-    addLog(`${nextPlayer.name}（敗北者）の手番：山札からカードを1枚引きました。`, 'turn');
+    addLog(`${nextPlayer.name} の手番（時計回り）：山札からカードを1枚引きました。`, 'turn');
 
     if (isOnlineMatch) {
       syncToOnline({
@@ -1191,6 +1193,7 @@ export default function App() {
             {/* Top Area: Opponents */}
             <OpponentsBar
               opponents={opponents}
+              allPlayers={players}
               activePlayerId={players[turnPlayerIndex]?.id}
               isSelectOpponentPhase={isHumanTurn && gamePhase === 'SELECT_OPPONENT'}
               onSelectOpponent={handleHumanSelectOpponent}
@@ -1219,6 +1222,7 @@ export default function App() {
             {humanPlayer && (
               <CurrentPlayerHand
                 player={humanPlayer}
+                seatNumber={players.findIndex((p) => p.id === humanPlayer?.id) + 1}
                 isMyTurn={isHumanTurn}
                 canPlayCard={canHumanPlayCard}
                 selectedCard={selectedHandCard}
