@@ -366,7 +366,18 @@ export default function App() {
         // CPU plays card after short realistic delay
         const timer = setTimeout(() => {
           const opponents = updatedPlayers.filter((p) => p.id !== activePlayer.id);
-          const target = selectCpuTargetOpponent(activePlayer, opponents);
+          const eligibleOpponents = opponents.filter((p) => p.hand.length > 0);
+
+          if (eligibleOpponents.length === 0) {
+            addLog(`対戦可能な手札を持つ相手がいないため、${activePlayer.name} のバトルはスキップされました。`, 'turn');
+            setTurnInstruction('対戦相手全員に手札がないため、次の手番へ進みます。');
+            setTimeout(() => {
+              handleAdvanceTurn();
+            }, 1200);
+            return;
+          }
+
+          const target = selectCpuTargetOpponent(activePlayer, eligibleOpponents);
 
           const card = selectCpuCardToPlay({
             cpuPlayer: updatedPlayers[turnPlayerIndex],
@@ -417,21 +428,36 @@ export default function App() {
     sound.playCardFlip();
 
     const opponents = updatedPlayers.filter((p) => p.id !== activePlayer.id);
-    if (opponents.length === 1) {
-      // Auto select only opponent
-      const target = opponents[0];
+    const validOpponents = opponents.filter((p) => p.hand.length > 0);
+
+    if (validOpponents.length === 0) {
+      // Return card to active player hand and advance turn
+      updatedPlayers[turnPlayerIndex].hand.push(selectedHandCard);
+      setPlayers(updatedPlayers);
+      setChallengerCard(null);
+      addLog(`対戦可能な手札を持つ相手がいないため、バトルはスキップされました。`, 'turn');
+      setTurnInstruction('対戦相手全員に手札がないため、次の手番へ進みます。');
+      setTimeout(() => {
+        handleAdvanceTurn();
+      }, 1500);
+      return;
+    }
+
+    if (opponents.length === 1 && validOpponents.length === 1) {
+      // Auto select only opponent if 2-player match
+      const target = validOpponents[0];
       setDefenderId(target.id);
       addLog(`${activePlayer.name} はカードを伏せて場に出し、${target.name} に対戦を挑みました！`, 'battle');
       handleDefenderTurn(target, selectedHandCard, updatedPlayers, isRevolution, drawPile.length);
     } else {
-      setTurnInstruction('バトルを挑む対戦相手を選択してください。');
+      setTurnInstruction('バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）');
       setGamePhase('SELECT_OPPONENT');
       if (isOnlineMatch) {
         syncToOnline({
           players: updatedPlayers,
           challengerCard: selectedHandCard,
           gamePhase: 'SELECT_OPPONENT',
-          turnInstruction: 'バトルを挑む対戦相手を選択してください。',
+          turnInstruction: 'バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）',
         });
       }
     }
@@ -439,6 +465,10 @@ export default function App() {
 
   // Human selects opponent from bar
   const handleHumanSelectOpponent = (target: Player) => {
+    if (target.hand.length === 0) {
+      // Cannot challenge player without cards in hand
+      return;
+    }
     setDefenderId(target.id);
     const activePlayer = players[turnPlayerIndex];
     addLog(`${activePlayer.name} は ${target.name} に対戦を挑みました！`, 'battle');
