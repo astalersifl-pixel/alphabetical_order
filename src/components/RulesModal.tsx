@@ -55,6 +55,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({
               各カードには固有の「ポイント」と「特殊効果」が存在します。
             </p>
             <ul className="list-disc list-inside text-stone-400 space-y-1">
+              <li>席順（手番順）はゲーム開始時にランダムで決定されます。</li>
               <li>カードをシャッフルし、各プレイヤーに初期手札として3枚ずつ配布します。</li>
               <li>残りのカードは山札（ドローデック）としてテーブル中央に配置します。</li>
             </ul>
@@ -88,7 +89,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({
               </li>
               <li>
                 <strong className="text-amber-200">手番終了＆次のターン：</strong>
-                手番が終了し、次は【バトルに敗北したプレイヤー】の番となります！
+                戦闘終了後、時計回りに次のプレイヤーへ手番が移ります！（席順に従って順番にターンプレイヤーとなります）
               </li>
             </ol>
           </div>
