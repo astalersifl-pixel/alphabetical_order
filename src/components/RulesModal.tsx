@@ -75,7 +75,7 @@ export const RulesModal: React.FC<RulesModalProps> = ({
                 <strong className="text-amber-200">セット：</strong> 手札から1枚を選び、裏向きで場に出します。
               </li>
               <li>
-                <strong className="text-amber-200">対戦相手の指名：</strong> 対戦するプレイヤーを1人選びます。選ばれたプレイヤーも手札から1枚裏向きで場に出します。
+                <strong className="text-amber-200">対戦相手の指名：</strong> 対戦するプレイヤーを1人選びます（<span className="text-amber-300 font-bold">※手札のないプレイヤーは選択できません</span>）。選ばれたプレイヤーも手札から1枚裏向きで場に出します。
               </li>
               <li>
                 <strong className="text-amber-200">オープン＆判定：</strong> 同時にカードをオープン！
