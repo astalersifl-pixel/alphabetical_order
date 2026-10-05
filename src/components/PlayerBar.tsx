@@ -6,6 +6,7 @@ import { sound } from '../utils/audio';
 
 interface OpponentsBarProps {
   opponents: Player[];
+  allPlayers?: Player[];
   activePlayerId: string;
   isSelectOpponentPhase: boolean;
   onSelectOpponent: (opponent: Player) => void;
@@ -15,6 +16,7 @@ interface OpponentsBarProps {
 
 export const OpponentsBar: React.FC<OpponentsBarProps> = ({
   opponents,
+  allPlayers,
   activePlayerId,
   isSelectOpponentPhase,
   onSelectOpponent,
@@ -27,6 +29,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
         const isCurrentTurn = opponent.id === activePlayerId;
         const isRevealedToViewer =
           opponent.isRevealedToAll || !!opponent.revealedToPlayers[viewerPlayerId];
+        const seatIndex = allPlayers ? allPlayers.findIndex((p) => p.id === opponent.id) : -1;
 
         return (
           <div
@@ -44,8 +47,13 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
                   {opponent.name.slice(0, 1)}
                 </div>
                 <div>
-                  <h4 className="font-serif-jp text-xs sm:text-sm font-bold text-stone-100 flex items-center gap-1">
-                    {opponent.name}
+                  <h4 className="font-serif-jp text-xs sm:text-sm font-bold text-stone-100 flex items-center gap-1.5 flex-wrap">
+                    <span>{opponent.name}</span>
+                    {seatIndex !== -1 && (
+                      <span className="text-[10px] text-amber-300/80 bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/20 font-mono">
+                        席順: {seatIndex + 1}番手
+                      </span>
+                    )}
                     {isCurrentTurn && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                   </h4>
                   <div className="text-[10px] text-stone-400 font-mono">
@@ -132,6 +140,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
 
 interface CurrentPlayerHandProps {
   player: Player;
+  seatNumber?: number;
   isMyTurn: boolean;
   canPlayCard: boolean;
   selectedCard: CardData | null;
@@ -144,6 +153,7 @@ interface CurrentPlayerHandProps {
 
 export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   player,
+  seatNumber,
   isMyTurn,
   canPlayCard,
   selectedCard,
@@ -165,8 +175,13 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
             </div>
           </div>
           <div>
-            <h3 className="font-serif-jp text-sm sm:text-base font-bold text-white flex items-center gap-2">
+            <h3 className="font-serif-jp text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
               <span>{player.name} (あなた)</span>
+              {seatNumber !== undefined && (
+                <span className="text-[10px] text-amber-300/80 bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/20 font-mono">
+                  席順: {seatNumber}番手
+                </span>
+              )}
               {isMyTurn && (
                 <span className="text-[11px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-bold">
                   あなたのターン
