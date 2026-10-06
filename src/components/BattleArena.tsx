@@ -24,9 +24,11 @@ interface BattleArenaProps {
   isRevolution: boolean;
   deckCount: number;
   discardCount: number;
+  viewerPlayerId?: string;
   onContinue?: () => void;
   waitingForPlayerAction?: boolean;
   onStartClash?: () => void;
+  onResolveEffects?: () => void;
   onOpenRules?: () => void;
 }
 
@@ -40,13 +42,24 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   isRevolution,
   deckCount,
   discardCount,
+  viewerPlayerId,
   onContinue,
   waitingForPlayerAction = false,
   onStartClash,
+  onResolveEffects,
   onOpenRules,
 }) => {
   const isChallengerWinner = battleRecord?.winnerId === challenger?.id;
   const isDefenderWinner = battleRecord?.winnerId === defender?.id;
+
+  // Only participants (challenger or defender) or spectators watching 2 CPUs can trigger actions
+  const isParticipant =
+    !viewerPlayerId ||
+    viewerPlayerId === challenger?.id ||
+    viewerPlayerId === defender?.id;
+  const isBothCpu = challenger?.type === 'cpu' && defender?.type === 'cpu';
+  const canControl = isParticipant || isBothCpu;
+  const effectsResolved = battleRecord?.effectsResolved ?? false;
 
   return (
     <div
@@ -296,18 +309,27 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {/* "勝負する！" Button when both cards are placed and ready to reveal */}
         {!battleReveal && challengerCard && defenderCard && onStartClash && (
           <div className="mt-6 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200 z-30">
-            <button
-              type="button"
-              onClick={onStartClash}
-              className="px-10 py-3.5 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:via-rose-400 hover:to-amber-400 text-slate-950 font-black font-serif-jp text-base sm:text-lg rounded-2xl shadow-2xl shadow-rose-950/80 hover:shadow-amber-500/40 transition-all flex items-center gap-3 cursor-pointer group active:scale-95 animate-bounce ring-4 ring-amber-400/50"
-            >
-              <Swords className="w-5 h-5 group-hover:rotate-45 transition-transform" />
-              <span>いざ、勝負する！</span>
-              <Sparkles className="w-5 h-5 fill-slate-950" />
-            </button>
-            <span className="text-xs text-amber-300 font-serif-jp mt-2 animate-pulse font-medium">
-              双方のカードが揃いました！ボタンを押してオープンしてください
-            </span>
+            {canControl ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onStartClash}
+                  className="px-10 py-3.5 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:via-rose-400 hover:to-amber-400 text-slate-950 font-black font-serif-jp text-base sm:text-lg rounded-2xl shadow-2xl shadow-rose-950/80 hover:shadow-amber-500/40 transition-all flex items-center gap-3 cursor-pointer group active:scale-95 animate-bounce ring-4 ring-amber-400/50"
+                >
+                  <Swords className="w-5 h-5 group-hover:rotate-45 transition-transform" />
+                  <span>いざ、勝負する！</span>
+                  <Sparkles className="w-5 h-5 fill-slate-950" />
+                </button>
+                <span className="text-xs text-amber-300 font-serif-jp mt-2 animate-pulse font-medium">
+                  双方のカードが揃いました！ボタンを押してオープンしてください
+                </span>
+              </>
+            ) : (
+              <div className="px-6 py-3 bg-slate-900/90 border border-amber-500/40 rounded-2xl text-amber-200 font-serif-jp text-xs sm:text-sm flex items-center gap-2.5 shadow-xl">
+                <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                <span>対戦者（{challenger?.name} vs {defender?.name}）による開示を待っています...</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -315,59 +337,99 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {battleReveal && battleRecord && (
           <div className="mt-5 w-full max-w-lg flex flex-col items-center text-center gap-2.5 animate-in fade-in duration-300">
             
-            {/* Special Instant Victory Banner */}
-            {battleRecord.instantWinWinnerId && (
-              <div className="p-3 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 rounded-2xl font-bold font-serif-jp shadow-2xl flex items-center justify-center gap-2 text-sm sm:text-base animate-bounce border-2 border-amber-200">
-                <Crown className="w-5 h-5 fill-slate-950" />
-                <span>
-                  【特異点完全勝利】
-                  {battleRecord.instantWinWinnerId === challenger?.id ? challenger?.name : defender?.name}
-                  の宿命的勝利！
-                </span>
-              </div>
-            )}
+            {/* Stage 1: Card Reveal & Winner Announcement (Before Card Effects Triggered) */}
+            {!effectsResolved && (
+              <div className="w-full flex flex-col items-center gap-3">
+                <div className="p-3 px-6 bg-slate-900/95 border border-amber-500/50 rounded-2xl text-sm sm:text-base text-stone-100 shadow-2xl flex items-center justify-center gap-2.5">
+                  <Crown className="w-5 h-5 text-amber-400 fill-amber-400 animate-bounce" />
+                  <span className="font-bold text-amber-300 font-serif-jp">
+                    {battleRecord.winnerId === challenger?.id ? challenger?.name : defender?.name}
+                  </span>
+                  <span className="font-serif-jp font-bold">の勝利！</span>
+                </div>
 
-            {/* Normal Outcome Pill */}
-            {!battleRecord.instantWinWinnerId && (
-              <div className="p-2.5 px-5 bg-slate-900/95 border border-amber-500/40 rounded-2xl text-xs sm:text-sm text-stone-100 shadow-xl flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                <span className="font-bold text-amber-300">
-                  {battleRecord.winnerId === challenger?.id ? challenger?.name : defender?.name}
+                <span className="text-xs text-stone-400 font-serif-jp">
+                  勝敗が決定しました。「カードの効果へ進む」を押して効果を発動してください
                 </span>
-                <span>の勝利！</span>
-                <span className="text-amber-400 font-mono font-bold">
-                  +{battleRecord.winnerId === challenger?.id ? defenderCard?.points : challengerCard?.points}pt
-                </span>
-                <span className="text-stone-400 text-xs">
-                  (相手のカードを獲得)
-                </span>
-              </div>
-            )}
 
-            {/* Effects triggered breakdown */}
-            {battleRecord.effectsTriggered.length > 0 && (
-              <div className="space-y-1.5 w-full">
-                {battleRecord.effectsTriggered.map((effect, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-center gap-2 shadow-md animate-in slide-in-from-bottom-1"
+                {/* "カードの効果へ" Button */}
+                {canControl ? (
+                  <button
+                    type="button"
+                    onClick={onResolveEffects}
+                    className="mt-1 px-8 py-3.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black font-serif-jp text-sm sm:text-base rounded-2xl shadow-xl shadow-emerald-950/80 hover:shadow-emerald-500/40 transition-all flex items-center gap-2.5 cursor-pointer group active:scale-95 animate-bounce ring-4 ring-emerald-400/40"
                   >
-                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-spin [animation-iteration-count:1]" />
-                    <span className="font-serif-jp font-medium">{effect}</span>
+                    <Sparkles className="w-5 h-5 fill-slate-950" />
+                    <span>カードの効果へ進む</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                ) : (
+                  <div className="mt-1 px-6 py-2.5 bg-slate-900/90 border border-emerald-500/30 rounded-2xl text-emerald-200 font-serif-jp text-xs sm:text-sm flex items-center gap-2 shadow-xl">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span>対戦者によるカード効果の発動を待っています...</span>
                   </div>
-                ))}
+                )}
               </div>
             )}
 
-            {/* Next Turn Button */}
-            {onContinue && waitingForPlayerAction && (
-              <button
-                onClick={onContinue}
-                className="mt-3 px-10 py-3 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black font-serif-jp text-sm rounded-2xl shadow-xl shadow-amber-950/60 hover:shadow-amber-500/30 transition-all flex items-center gap-2 cursor-pointer group active:scale-95"
-              >
-                <span>次のターンへ進む</span>
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+            {/* Stage 2: Effects breakdown & Score Acquisition (After Card Effects Triggered) */}
+            {effectsResolved && (
+              <>
+                {/* Special Instant Victory Banner */}
+                {battleRecord.instantWinWinnerId && (
+                  <div className="p-3 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 rounded-2xl font-bold font-serif-jp shadow-2xl flex items-center justify-center gap-2 text-sm sm:text-base animate-bounce border-2 border-amber-200">
+                    <Crown className="w-5 h-5 fill-slate-950" />
+                    <span>
+                      【特異点完全勝利】
+                      {battleRecord.instantWinWinnerId === challenger?.id ? challenger?.name : defender?.name}
+                      の宿命的勝利！
+                    </span>
+                  </div>
+                )}
+
+                {/* Normal Outcome Pill */}
+                {!battleRecord.instantWinWinnerId && (
+                  <div className="p-2.5 px-5 bg-slate-900/95 border border-amber-500/40 rounded-2xl text-xs sm:text-sm text-stone-100 shadow-xl flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="font-bold text-amber-300">
+                      {battleRecord.winnerId === challenger?.id ? challenger?.name : defender?.name}
+                    </span>
+                    <span>の勝利！</span>
+                    <span className="text-amber-400 font-mono font-bold">
+                      +{battleRecord.winnerId === challenger?.id ? defenderCard?.points : challengerCard?.points}pt
+                    </span>
+                    <span className="text-stone-400 text-xs">
+                      (相手のカードを獲得)
+                    </span>
+                  </div>
+                )}
+
+                {/* Effects triggered breakdown */}
+                {battleRecord.effectsTriggered.length > 0 && (
+                  <div className="space-y-1.5 w-full">
+                    {battleRecord.effectsTriggered.map((effect, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 px-3.5 rounded-xl bg-gradient-to-r from-emerald-950/80 to-slate-900 border border-emerald-500/40 text-emerald-200 text-xs flex items-center justify-center gap-2 shadow-md animate-in slide-in-from-bottom-1"
+                      >
+                        <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 animate-spin [animation-iteration-count:1]" />
+                        <span className="font-serif-jp font-medium">{effect}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Next Turn Button */}
+                {onContinue && waitingForPlayerAction && (
+                  <button
+                    onClick={onContinue}
+                    className="mt-3 px-10 py-3 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black font-serif-jp text-sm rounded-2xl shadow-xl shadow-amber-950/60 hover:shadow-amber-500/30 transition-all flex items-center gap-2 cursor-pointer group active:scale-95"
+                  >
+                    <span>次のターンへ進む</span>
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                )}
+              </>
             )}
 
           </div>

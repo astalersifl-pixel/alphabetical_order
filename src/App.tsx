@@ -32,6 +32,7 @@ import { EffectModal } from './components/EffectModal';
 import { OnlineLobbyModal } from './components/OnlineLobbyModal';
 import { PublicCardsModal } from './components/PublicCardsModal';
 import { CustomImageModal } from './components/CustomImageModal';
+import { ConfirmChallengeModal } from './components/ConfirmChallengeModal';
 import {
   OnlineGameState,
   OnlineRoomData,
@@ -81,6 +82,7 @@ export default function App() {
   const [selectedHandCard, setSelectedHandCard] = useState<CardData | null>(null);
   const [turnInstruction, setTurnInstruction] = useState<string>('');
   const [waitingForBattleNext, setWaitingForBattleNext] = useState<boolean>(false);
+  const [confirmingOpponent, setConfirmingOpponent] = useState<Player | null>(null);
 
   // Instant Win & Game Over
   const [instantWinWinnerId, setInstantWinWinnerId] = useState<string | null>(null);
@@ -444,11 +446,9 @@ export default function App() {
     }
 
     if (opponents.length === 1 && validOpponents.length === 1) {
-      // Auto select only opponent if 2-player match
-      const target = validOpponents[0];
-      setDefenderId(target.id);
-      addLog(`${activePlayer.name} はカードを伏せて場に出し、${target.name} に対戦を挑みました！`, 'battle');
-      handleDefenderTurn(target, selectedHandCard, updatedPlayers, isRevolution, drawPile.length);
+      // 2-player match: show confirmation dialog before challenging
+      setConfirmingOpponent(validOpponents[0]);
+      setTurnInstruction(`${validOpponents[0].name} に対戦を挑みますか？確認してください。`);
     } else {
       setTurnInstruction('バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）');
       setGamePhase('SELECT_OPPONENT');
@@ -469,11 +469,41 @@ export default function App() {
       // Cannot challenge player without cards in hand
       return;
     }
+    setConfirmingOpponent(target);
+  };
+
+  // Confirm challenge from modal
+  const handleConfirmChallenge = () => {
+    if (!confirmingOpponent) return;
+    const target = confirmingOpponent;
+    setConfirmingOpponent(null);
     setDefenderId(target.id);
     const activePlayer = players[turnPlayerIndex];
     addLog(`${activePlayer.name} は ${target.name} に対戦を挑みました！`, 'battle');
     if (challengerCard) {
       handleDefenderTurn(target, challengerCard, players, isRevolution, drawPile.length);
+    }
+  };
+
+  // Cancel challenge from modal
+  const handleCancelChallenge = () => {
+    setConfirmingOpponent(null);
+    const opponents = players.filter((p) => p.id !== players[turnPlayerIndex]?.id);
+    if (opponents.length === 1 && challengerCard) {
+      // 2-player match: return card to active player's hand so they can pick again
+      const activePlayer = players[turnPlayerIndex];
+      const updatedPlayers = [...players];
+      updatedPlayers[turnPlayerIndex] = {
+        ...activePlayer,
+        hand: [...activePlayer.hand, challengerCard],
+      };
+      setPlayers(updatedPlayers);
+      setChallengerCard(null);
+      setGamePhase('SELECT_PLAY_CARD');
+      setTurnInstruction('手札から場に出すカードを1枚選択してください。');
+    } else {
+      setTurnInstruction('バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）');
+      setGamePhase('SELECT_OPPONENT');
     }
   };
 
@@ -513,9 +543,12 @@ export default function App() {
           setTurnInstruction(`両者のカードが伏せられました。「勝負する！」を押して開示してください！`);
           setGamePhase('READY_TO_CLASH');
         } else {
-          // Both are CPUs, resolve automatically after short suspense
+          // Both are CPUs: reveal cards, show clash outcome for 2 seconds, then resolve effects
           setTimeout(() => {
-            resolveBattle(currentChallengerCard, card, currentPlayers, currentRevolution);
+            startClashReveal(currentChallengerCard, card, currentPlayers, currentRevolution);
+            setTimeout(() => {
+              resolveBattleEffects(currentChallengerCard, card, currentPlayers, currentRevolution);
+            }, 2000);
           }, 1000);
         }
       }, 700);
@@ -571,12 +604,21 @@ export default function App() {
   // Trigger clash reveal on "勝負する！" button click
   const handleStartClash = () => {
     if (!challengerCard || !defenderCard) return;
+    const viewerId = isOnlineMatch ? myOnlinePlayerId : humanPlayer?.id;
+    const chPlayer = players.find((p) => p.id === challengerId);
+    const defPlayer = players.find((p) => p.id === defenderId);
+    const isBothCpu = chPlayer?.type === 'cpu' && defPlayer?.type === 'cpu';
+    // Non-participants cannot trigger clash button
+    if (viewerId && viewerId !== challengerId && viewerId !== defenderId && !isBothCpu) {
+      return;
+    }
+
     sound.playClick();
-    resolveBattle(challengerCard, defenderCard, players, isRevolution);
+    startClashReveal(challengerCard, defenderCard, players, isRevolution);
   };
 
-  // Core Battle Resolution Logic
-  const resolveBattle = (
+  // Stage 1: Reveal cards and show clash animation & winner announcement
+  const startClashReveal = (
     cCard: CardData,
     dCard: CardData,
     currentPlayers: Player[],
@@ -586,6 +628,72 @@ export default function App() {
     setBattleReveal(true);
     sound.playClash();
 
+    const activeChallengerId = challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
+    const challenger = currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
+    const defender = currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
+
+    // Compare cards
+    const comp = compareCards(cCard, dCard, currentRevolution);
+    const winner = comp >= 0 ? challenger : defender;
+    const loser = comp >= 0 ? defender : challenger;
+
+    addLog(`【開示】${challenger.name}の「${cCard.letter}: ${cCard.japaneseName}」 vs ${defender.name}の「${dCard.letter}: ${dCard.japaneseName}」！ 勝者：${winner.name}`, 'battle');
+
+    const initialRecord: BattleRecord = {
+      turnNumber,
+      challengerId: challenger.id,
+      challengerCard: cCard,
+      defenderId: defender.id,
+      defenderCard: dCard,
+      winnerId: winner.id,
+      loserId: loser.id,
+      instantWinWinnerId: null,
+      effectsTriggered: [],
+      revolutionChanged: false,
+      isRevolutionActiveAtBattle: currentRevolution,
+      effectsResolved: false,
+    };
+    setBattleRecord(initialRecord);
+
+    const revealInstruction = `${winner.name} の勝利！「カードの効果へ進む」を押してカード効果を発動してください。`;
+    setTurnInstruction(revealInstruction);
+
+    if (isOnlineMatch) {
+      syncToOnline({
+        battleReveal: true,
+        battleRecord: initialRecord,
+        challengerCard: cCard,
+        defenderCard: dCard,
+        gamePhase: 'BATTLE_REVEAL',
+        turnInstruction: revealInstruction,
+        waitingForBattleNext: false,
+      });
+    }
+  };
+
+  // Trigger card effects on "カードの効果へ進む" button click
+  const handleTriggerEffects = () => {
+    if (!challengerCard || !defenderCard) return;
+    const viewerId = isOnlineMatch ? myOnlinePlayerId : humanPlayer?.id;
+    const chPlayer = players.find((p) => p.id === challengerId);
+    const defPlayer = players.find((p) => p.id === defenderId);
+    const isBothCpu = chPlayer?.type === 'cpu' && defPlayer?.type === 'cpu';
+    // Non-participants cannot trigger effects button
+    if (viewerId && viewerId !== challengerId && viewerId !== defenderId && !isBothCpu) {
+      return;
+    }
+
+    sound.playClick();
+    resolveBattleEffects(challengerCard, defenderCard, players, isRevolution);
+  };
+
+  // Stage 2: Core Battle Effects Resolution
+  const resolveBattleEffects = (
+    cCard: CardData,
+    dCard: CardData,
+    currentPlayers: Player[],
+    currentRevolution: boolean
+  ) => {
     const activeChallengerId = challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
     let challenger = currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
     let defender = currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
@@ -939,6 +1047,7 @@ export default function App() {
       effectsTriggered: effects,
       revolutionChanged: revChanged,
       isRevolutionActiveAtBattle: currentRevolution,
+      effectsResolved: true,
     };
     setBattleRecord(record);
 
@@ -950,6 +1059,11 @@ export default function App() {
     // Update state with updated players and new draw pile
     setPlayers([...currentPlayers]);
     setDrawPile(currentDrawPile);
+
+    const postEffectInstruction = interactionNeeded
+      ? interactionNeeded.description
+      : '効果の処理が完了しました。「次のターンへ進む」を押してください。';
+    setTurnInstruction(postEffectInstruction);
 
     // If interaction modal needed (e.g. human Werewolf search, Vampire steal)
     if (interactionNeeded) {
@@ -975,6 +1089,7 @@ export default function App() {
         instantWinReason: instantReason,
         effectInteraction: interactionNeeded,
         gamePhase: interactionNeeded ? 'EFFECT_INTERACTION' : 'BATTLE_REVEAL',
+        turnInstruction: postEffectInstruction,
         waitingForBattleNext: !interactionNeeded,
       });
     }
@@ -1242,9 +1357,11 @@ export default function App() {
               isRevolution={isRevolution}
               deckCount={drawPile.length}
               discardCount={discardPile.length}
+              viewerPlayerId={isOnlineMatch ? (myOnlinePlayerId || undefined) : humanPlayer?.id}
               onContinue={handleAdvanceTurn}
               waitingForPlayerAction={waitingForBattleNext}
               onStartClash={handleStartClash}
+              onResolveEffects={handleTriggerEffects}
               onOpenRules={() => setIsRulesOpen(true)}
             />
 
@@ -1341,6 +1458,17 @@ export default function App() {
         onGameStarted={handleOnlineGameStarted}
         initialRoomCode={initialRoomCode}
       />
+
+      {/* Confirm Challenge Modal */}
+      {confirmingOpponent && (
+        <ConfirmChallengeModal
+          target={confirmingOpponent}
+          challengerCard={challengerCard}
+          seatNumber={players.findIndex((p) => p.id === confirmingOpponent.id) + 1}
+          onConfirm={handleConfirmChallenge}
+          onCancel={handleCancelChallenge}
+        />
+      )}
 
     </div>
   );
