@@ -61,6 +61,7 @@ export interface BattleRecord {
   effectsTriggered: string[];
   revolutionChanged: boolean;
   isRevolutionActiveAtBattle: boolean;
+  effectsResolved?: boolean; // カード効果が処理済みかどうか
 }
 
 export interface EffectInteractionState {
