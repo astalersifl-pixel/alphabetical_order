@@ -32,6 +32,7 @@ import { EffectModal } from './components/EffectModal';
 import { OnlineLobbyModal } from './components/OnlineLobbyModal';
 import { PublicCardsModal } from './components/PublicCardsModal';
 import { CustomImageModal } from './components/CustomImageModal';
+import { ConfirmChallengeModal } from './components/ConfirmChallengeModal';
 import {
   OnlineGameState,
   OnlineRoomData,
@@ -81,6 +82,7 @@ export default function App() {
   const [selectedHandCard, setSelectedHandCard] = useState<CardData | null>(null);
   const [turnInstruction, setTurnInstruction] = useState<string>('');
   const [waitingForBattleNext, setWaitingForBattleNext] = useState<boolean>(false);
+  const [confirmingOpponent, setConfirmingOpponent] = useState<Player | null>(null);
 
   // Instant Win & Game Over
   const [instantWinWinnerId, setInstantWinWinnerId] = useState<string | null>(null);
@@ -274,7 +276,13 @@ export default function App() {
       });
     }
 
-    // 3. Deal 3 cards to each player
+    // 3. 席順（手番順）をランダムにシャッフル
+    for (let i = newPlayers.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newPlayers[i], newPlayers[j]] = [newPlayers[j], newPlayers[i]];
+    }
+
+    // 4. Deal 3 cards to each player
     newPlayers.forEach((p) => {
       p.hand = deck.splice(0, 3);
     });
@@ -285,6 +293,8 @@ export default function App() {
     setIsRevolution(false);
     setTurnPlayerIndex(0);
     setTurnNumber(1);
+    setChallengerId(newPlayers[0].id);
+    setDefenderId(null);
     setInstantWinWinnerId(null);
     setInstantWinReason('');
     setBattleRecord(null);
@@ -294,11 +304,13 @@ export default function App() {
     setSelectedHandCard(null);
     setEffectInteraction(null);
 
+    const seatOrderText = newPlayers.map((p, idx) => `${idx + 1}番手: ${p.name}`).join(' → ');
+
     setGameLogs([
       {
         id: 'start',
         turn: 1,
-        text: `ゲーム開始！各プレイヤーにカードを3枚配りました。（山札残り: ${deck.length}枚）`,
+        text: `ゲーム開始！席順（ランダム）: [ ${seatOrderText} ]（手番は時計回りに進行します）`,
         type: 'special',
         timestamp: Date.now(),
       },
@@ -356,7 +368,18 @@ export default function App() {
         // CPU plays card after short realistic delay
         const timer = setTimeout(() => {
           const opponents = updatedPlayers.filter((p) => p.id !== activePlayer.id);
-          const target = selectCpuTargetOpponent(activePlayer, opponents);
+          const eligibleOpponents = opponents.filter((p) => p.hand.length > 0);
+
+          if (eligibleOpponents.length === 0) {
+            addLog(`対戦可能な手札を持つ相手がいないため、${activePlayer.name} のバトルはスキップされました。`, 'turn');
+            setTurnInstruction('対戦相手全員に手札がないため、次の手番へ進みます。');
+            setTimeout(() => {
+              handleAdvanceTurn();
+            }, 1200);
+            return;
+          }
+
+          const target = selectCpuTargetOpponent(activePlayer, eligibleOpponents);
 
           const card = selectCpuCardToPlay({
             cpuPlayer: updatedPlayers[turnPlayerIndex],
@@ -372,6 +395,7 @@ export default function App() {
           );
           setPlayers([...updatedPlayers]);
           setChallengerCard(card);
+          setChallengerId(activePlayer.id);
           setDefenderId(target.id);
 
           sound.playCardFlip();
@@ -400,26 +424,40 @@ export default function App() {
     };
     setPlayers(updatedPlayers);
     setChallengerCard(selectedHandCard);
+    setChallengerId(activePlayer.id);
     setSelectedHandCard(null);
 
     sound.playCardFlip();
 
     const opponents = updatedPlayers.filter((p) => p.id !== activePlayer.id);
-    if (opponents.length === 1) {
-      // Auto select only opponent
-      const target = opponents[0];
-      setDefenderId(target.id);
-      addLog(`${activePlayer.name} はカードを伏せて場に出し、${target.name} に対戦を挑みました！`, 'battle');
-      handleDefenderTurn(target, selectedHandCard, updatedPlayers, isRevolution, drawPile.length);
+    const validOpponents = opponents.filter((p) => p.hand.length > 0);
+
+    if (validOpponents.length === 0) {
+      // Return card to active player hand and advance turn
+      updatedPlayers[turnPlayerIndex].hand.push(selectedHandCard);
+      setPlayers(updatedPlayers);
+      setChallengerCard(null);
+      addLog(`対戦可能な手札を持つ相手がいないため、バトルはスキップされました。`, 'turn');
+      setTurnInstruction('対戦相手全員に手札がないため、次の手番へ進みます。');
+      setTimeout(() => {
+        handleAdvanceTurn();
+      }, 1500);
+      return;
+    }
+
+    if (opponents.length === 1 && validOpponents.length === 1) {
+      // 2-player match: show confirmation dialog before challenging
+      setConfirmingOpponent(validOpponents[0]);
+      setTurnInstruction(`${validOpponents[0].name} に対戦を挑みますか？確認してください。`);
     } else {
-      setTurnInstruction('バトルを挑む対戦相手を選択してください。');
+      setTurnInstruction('バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）');
       setGamePhase('SELECT_OPPONENT');
       if (isOnlineMatch) {
         syncToOnline({
           players: updatedPlayers,
           challengerCard: selectedHandCard,
           gamePhase: 'SELECT_OPPONENT',
-          turnInstruction: 'バトルを挑む対戦相手を選択してください。',
+          turnInstruction: 'バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）',
         });
       }
     }
@@ -427,11 +465,45 @@ export default function App() {
 
   // Human selects opponent from bar
   const handleHumanSelectOpponent = (target: Player) => {
+    if (target.hand.length === 0) {
+      // Cannot challenge player without cards in hand
+      return;
+    }
+    setConfirmingOpponent(target);
+  };
+
+  // Confirm challenge from modal
+  const handleConfirmChallenge = () => {
+    if (!confirmingOpponent) return;
+    const target = confirmingOpponent;
+    setConfirmingOpponent(null);
     setDefenderId(target.id);
     const activePlayer = players[turnPlayerIndex];
     addLog(`${activePlayer.name} は ${target.name} に対戦を挑みました！`, 'battle');
     if (challengerCard) {
       handleDefenderTurn(target, challengerCard, players, isRevolution, drawPile.length);
+    }
+  };
+
+  // Cancel challenge from modal
+  const handleCancelChallenge = () => {
+    setConfirmingOpponent(null);
+    const opponents = players.filter((p) => p.id !== players[turnPlayerIndex]?.id);
+    if (opponents.length === 1 && challengerCard) {
+      // 2-player match: return card to active player's hand so they can pick again
+      const activePlayer = players[turnPlayerIndex];
+      const updatedPlayers = [...players];
+      updatedPlayers[turnPlayerIndex] = {
+        ...activePlayer,
+        hand: [...activePlayer.hand, challengerCard],
+      };
+      setPlayers(updatedPlayers);
+      setChallengerCard(null);
+      setGamePhase('SELECT_PLAY_CARD');
+      setTurnInstruction('手札から場に出すカードを1枚選択してください。');
+    } else {
+      setTurnInstruction('バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）');
+      setGamePhase('SELECT_OPPONENT');
     }
   };
 
@@ -471,9 +543,12 @@ export default function App() {
           setTurnInstruction(`両者のカードが伏せられました。「勝負する！」を押して開示してください！`);
           setGamePhase('READY_TO_CLASH');
         } else {
-          // Both are CPUs, resolve automatically after short suspense
+          // Both are CPUs: reveal cards, show clash outcome for 2 seconds, then resolve effects
           setTimeout(() => {
-            resolveBattle(currentChallengerCard, card, currentPlayers, currentRevolution);
+            startClashReveal(currentChallengerCard, card, currentPlayers, currentRevolution);
+            setTimeout(() => {
+              resolveBattleEffects(currentChallengerCard, card, currentPlayers, currentRevolution);
+            }, 2000);
           }, 1000);
         }
       }, 700);
@@ -529,12 +604,21 @@ export default function App() {
   // Trigger clash reveal on "勝負する！" button click
   const handleStartClash = () => {
     if (!challengerCard || !defenderCard) return;
+    const viewerId = isOnlineMatch ? myOnlinePlayerId : humanPlayer?.id;
+    const chPlayer = players.find((p) => p.id === challengerId);
+    const defPlayer = players.find((p) => p.id === defenderId);
+    const isBothCpu = chPlayer?.type === 'cpu' && defPlayer?.type === 'cpu';
+    // Non-participants cannot trigger clash button
+    if (viewerId && viewerId !== challengerId && viewerId !== defenderId && !isBothCpu) {
+      return;
+    }
+
     sound.playClick();
-    resolveBattle(challengerCard, defenderCard, players, isRevolution);
+    startClashReveal(challengerCard, defenderCard, players, isRevolution);
   };
 
-  // Core Battle Resolution Logic
-  const resolveBattle = (
+  // Stage 1: Reveal cards and show clash animation & winner announcement
+  const startClashReveal = (
     cCard: CardData,
     dCard: CardData,
     currentPlayers: Player[],
@@ -544,8 +628,75 @@ export default function App() {
     setBattleReveal(true);
     sound.playClash();
 
-    const challenger = currentPlayers.find((p) => p.id === challengerId)!;
-    const defender = currentPlayers.find((p) => p.id === defenderId)!;
+    const activeChallengerId = challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
+    const challenger = currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
+    const defender = currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
+
+    // Compare cards
+    const comp = compareCards(cCard, dCard, currentRevolution);
+    const winner = comp >= 0 ? challenger : defender;
+    const loser = comp >= 0 ? defender : challenger;
+
+    addLog(`【開示】${challenger.name}の「${cCard.letter}: ${cCard.japaneseName}」 vs ${defender.name}の「${dCard.letter}: ${dCard.japaneseName}」！ 勝者：${winner.name}`, 'battle');
+
+    const initialRecord: BattleRecord = {
+      turnNumber,
+      challengerId: challenger.id,
+      challengerCard: cCard,
+      defenderId: defender.id,
+      defenderCard: dCard,
+      winnerId: winner.id,
+      loserId: loser.id,
+      instantWinWinnerId: null,
+      effectsTriggered: [],
+      revolutionChanged: false,
+      isRevolutionActiveAtBattle: currentRevolution,
+      effectsResolved: false,
+    };
+    setBattleRecord(initialRecord);
+
+    const revealInstruction = `${winner.name} の勝利！「カードの効果へ進む」を押してカード効果を発動してください。`;
+    setTurnInstruction(revealInstruction);
+
+    if (isOnlineMatch) {
+      syncToOnline({
+        battleReveal: true,
+        battleRecord: initialRecord,
+        challengerCard: cCard,
+        defenderCard: dCard,
+        gamePhase: 'BATTLE_REVEAL',
+        turnInstruction: revealInstruction,
+        waitingForBattleNext: false,
+      });
+    }
+  };
+
+  // Trigger card effects on "カードの効果へ進む" button click
+  const handleTriggerEffects = () => {
+    if (!challengerCard || !defenderCard) return;
+    const viewerId = isOnlineMatch ? myOnlinePlayerId : humanPlayer?.id;
+    const chPlayer = players.find((p) => p.id === challengerId);
+    const defPlayer = players.find((p) => p.id === defenderId);
+    const isBothCpu = chPlayer?.type === 'cpu' && defPlayer?.type === 'cpu';
+    // Non-participants cannot trigger effects button
+    if (viewerId && viewerId !== challengerId && viewerId !== defenderId && !isBothCpu) {
+      return;
+    }
+
+    sound.playClick();
+    resolveBattleEffects(challengerCard, defenderCard, players, isRevolution);
+  };
+
+  // Stage 2: Core Battle Effects Resolution
+  const resolveBattleEffects = (
+    cCard: CardData,
+    dCard: CardData,
+    currentPlayers: Player[],
+    currentRevolution: boolean
+  ) => {
+    const activeChallengerId = challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
+    let challenger = currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
+    let defender = currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
 
     // Compare cards
     const comp = compareCards(cCard, dCard, currentRevolution);
@@ -614,6 +765,7 @@ export default function App() {
     let loserDraws = 0;
     let leviathanShuffle = false;
     let interactionNeeded: EffectInteractionState | null = null;
+    let currentDrawPile = [...drawPile];
 
     if (!isUnicornNegated && !instantWinner) {
       // Check Revolutionary (R) - Winner effect
@@ -656,14 +808,39 @@ export default function App() {
         case 'S':
           loserDraws = 1;
           effects.push(`${loserCard.japaneseName}の効果：敗北により山札から1枚ドロー`);
-          addLog(`${loser.name} は「${loserCard.japaneseName}」の敗北時効果で1枚ドローします。`, 'effect');
+          addLog(`${loser.name} は「${loserCard.japaneseName}」の敗北時効果で山札からカードを引きます。`, 'effect');
           break;
 
         // Joker (J):
-        // "バトルに負けた場合、全員の手札からカードを見ずに1枚指定して捨てさせ自分のポイントに加える。"
+        // "バトルに負けた場合、プレイヤーを選ぶ。そのプレイヤーからランダムに1枚選び自分のポイントにする。"
         case 'J':
-          effects.push('死神の効果：他プレイヤーの手札から1枚ずつ奪って自らの得点に！');
-          addLog(`${loser.name} の死神が鎌を振るい、他プレイヤーの手札を狩り取ります！`, 'effect');
+          const jokerCandidates = currentPlayers.filter(
+            (p) => p.id !== loser.id && p.hand.length > 0 && !(isGargoyleImmune && p.id === winner.id)
+          );
+
+          if (jokerCandidates.length > 0) {
+            effects.push('死神の効果：プレイヤーを1人選び手札からランダムに1枚奪って自分の得点に！');
+            if (loser.type === 'human') {
+              interactionNeeded = {
+                type: 'JOKER_SELECT_PLAYER',
+                actorPlayerId: loser.id,
+                candidatePlayers: jokerCandidates,
+                description: '死神の力：手札からランダムに1枚奪って自分の得点にするプレイヤーを1人選択してください。',
+              };
+            } else {
+              // CPU selects the player with the highest score
+              const target = jokerCandidates.sort((a, b) => b.score - a.score)[0];
+              if (target && target.hand.length > 0) {
+                const randomIndex = Math.floor(Math.random() * target.hand.length);
+                const stolenCard = target.hand.splice(randomIndex, 1)[0];
+                loser.capturedCards.push(stolenCard);
+                loser.score += stolenCard.points;
+                addLog(`${loser.name} の死神は ${target.name} の手札からランダムに「${stolenCard.japaneseName}」を刈り取り、自分の得点（+${stolenCard.points}pt）としました！`, 'effect');
+              }
+            }
+          } else {
+            addLog(`${loser.name} の死神が鎌を振るいましたが、手札を持つ対象がいませんでした。`, 'effect');
+          }
           break;
 
         // Leviathan (L):
@@ -747,19 +924,19 @@ export default function App() {
         // Werewolf (W):
         // "バトルに負けた場合、山札のすべてのカードを見て好きなカードを1枚手札に加える。"
         case 'W':
-          if (drawPile.length > 0) {
+          if (currentDrawPile.length > 0) {
             effects.push('狼男の効果：山札の全カードを見て好きな1枚をサーチ！');
             if (loser.type === 'human') {
               interactionNeeded = {
                 type: 'WEREWOLF_SEARCH_DECK',
                 actorPlayerId: loser.id,
-                availableCards: [...drawPile],
+                availableCards: [...currentDrawPile],
                 description: '山札の中から好きなカードを1枚選んで手札に加えてください。',
               };
             } else {
               // CPU searches best card
-              const picked = selectCpuWerewolfDeckCard(drawPile, newRevolution);
-              setDrawPile((prev) => prev.filter((c) => c.letter !== picked.letter));
+              const picked = selectCpuWerewolfDeckCard(currentDrawPile, newRevolution);
+              currentDrawPile = currentDrawPile.filter((c) => c.letter !== picked.letter);
               loser.hand.push(picked);
               addLog(`${loser.name} の狼男は山札の深淵から「${picked.japaneseName}」を嗅ぎつけ手札に加えました！`, 'effect');
             }
@@ -819,23 +996,10 @@ export default function App() {
       }
     }
 
-    // Apply Joker hand steal discard
-    if (!isUnicornNegated && loserCard.letter === 'J') {
-      currentPlayers.forEach((p) => {
-        if (p.id !== loser.id && p.hand.length > 0 && !(isGargoyleImmune && p.id === winner.id)) {
-          const randomIndex = Math.floor(Math.random() * p.hand.length);
-          const discarded = p.hand.splice(randomIndex, 1)[0];
-          loser.capturedCards.push(discarded);
-          loser.score += discarded.points;
-          addLog(`${loser.name} の死神は ${p.name} の手札から「${discarded.japaneseName}」を刈り取り、自分の得点としました！`, 'effect');
-        }
-      });
-    }
-
     // Apply Leviathan hand shuffle
     if (leviathanShuffle) {
       const handCounts = currentPlayers.map((p) => p.hand.length);
-      const allCards = [...currentPlayers.flatMap((p) => p.hand), ...drawPile];
+      const allCards = [...currentPlayers.flatMap((p) => p.hand), ...currentDrawPile];
       // Shuffle
       for (let i = allCards.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -844,16 +1008,17 @@ export default function App() {
       currentPlayers.forEach((p, idx) => {
         p.hand = allCards.splice(0, handCounts[idx]);
       });
-      setDrawPile(allCards);
+      currentDrawPile = allCards;
       sound.playCardDraw();
     }
 
-    // Apply loser draw if E, H, I, K, M, N, S
-    if (loserDraws > 0 && drawPile.length > 0) {
-      const drawn = drawPile[0];
-      setDrawPile((prev) => prev.slice(1));
+    // Apply loser draw if E, H, I, K, M, N, S (Consumes card from currentDrawPile!)
+    if (loserDraws > 0 && currentDrawPile.length > 0) {
+      const drawn = currentDrawPile[0];
+      currentDrawPile = currentDrawPile.slice(1);
       loser.hand.push(drawn);
       sound.playCardDraw();
+      addLog(`${loser.name} は「${loserCard.japaneseName}」の効果で山札から「${drawn.japaneseName}」を引きました。`, 'effect');
     }
 
     // Points & Capture calculation:
@@ -882,6 +1047,7 @@ export default function App() {
       effectsTriggered: effects,
       revolutionChanged: revChanged,
       isRevolutionActiveAtBattle: currentRevolution,
+      effectsResolved: true,
     };
     setBattleRecord(record);
 
@@ -889,6 +1055,15 @@ export default function App() {
       setInstantWinWinnerId(instantWinner);
       setInstantWinReason(instantReason);
     }
+
+    // Update state with updated players and new draw pile
+    setPlayers([...currentPlayers]);
+    setDrawPile(currentDrawPile);
+
+    const postEffectInstruction = interactionNeeded
+      ? interactionNeeded.description
+      : '効果の処理が完了しました。「次のターンへ進む」を押してください。';
+    setTurnInstruction(postEffectInstruction);
 
     // If interaction modal needed (e.g. human Werewolf search, Vampire steal)
     if (interactionNeeded) {
@@ -903,7 +1078,7 @@ export default function App() {
     if (isOnlineMatch) {
       syncToOnline({
         players: [...currentPlayers],
-        drawPile: [...drawPile],
+        drawPile: currentDrawPile,
         discardPile: [...discardPile],
         isRevolution: newRevolution,
         battleRecord: record,
@@ -914,6 +1089,7 @@ export default function App() {
         instantWinReason: instantReason,
         effectInteraction: interactionNeeded,
         gamePhase: interactionNeeded ? 'EFFECT_INTERACTION' : 'BATTLE_REVEAL',
+        turnInstruction: postEffectInstruction,
         waitingForBattleNext: !interactionNeeded,
       });
     }
@@ -945,14 +1121,8 @@ export default function App() {
       return;
     }
 
-    // 次はバトルに敗北したプレイヤーの番となる
-    let nextIndex = (turnPlayerIndex + 1) % players.length;
-    if (battleRecord?.loserId) {
-      const loserIndex = players.findIndex((p) => p.id === battleRecord.loserId);
-      if (loserIndex !== -1) {
-        nextIndex = loserIndex;
-      }
-    }
+    // 手番は時計回りに次のプレイヤーへ進む
+    const nextIndex = (turnPlayerIndex + 1) % players.length;
 
     const drawnCard = drawPile[0];
     const newDrawPile = drawPile.slice(1);
@@ -964,7 +1134,7 @@ export default function App() {
     };
 
     const nextTurnNum = turnNumber + 1;
-    const nextInstruction = `${nextPlayer.name}（敗北側）の手番です。手札から場に出すカードを選択してください。`;
+    const nextInstruction = `${nextPlayer.name} の手番です。手札から場に出すカードを選択してください。`;
 
     setPlayers(updatedPlayers);
     setDrawPile(newDrawPile);
@@ -982,7 +1152,7 @@ export default function App() {
     setGamePhase('SELECT_PLAY_CARD');
 
     sound.playCardDraw();
-    addLog(`${nextPlayer.name}（敗北者）の手番：山札からカードを1枚引きました。`, 'turn');
+    addLog(`${nextPlayer.name} の手番（時計回り）：山札からカードを1枚引きました。`, 'turn');
 
     if (isOnlineMatch) {
       syncToOnline({
@@ -1007,12 +1177,20 @@ export default function App() {
   const handleSelectInteractionCard = (card: CardData) => {
     if (!effectInteraction) return;
 
+    // Security check: Only the actor can choose!
+    if (humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
+      return;
+    }
+
     const updatedPlayers = [...players];
     const actor = updatedPlayers.find((p) => p.id === effectInteraction.actorPlayerId);
     if (!actor) return;
 
+    let updatedDrawPile = [...drawPile];
+
     if (effectInteraction.type === 'WEREWOLF_SEARCH_DECK') {
-      setDrawPile((prev) => prev.filter((c) => c.letter !== card.letter));
+      updatedDrawPile = updatedDrawPile.filter((c) => c.letter !== card.letter);
+      setDrawPile(updatedDrawPile);
       actor.hand.push(card);
       addLog(`${actor.name} は山札から「${card.japaneseName}」を選び手札に加えました！`, 'effect');
     } else if (effectInteraction.type === 'VAMPIRE_STEAL' || effectInteraction.type === 'XENOS_STEAL') {
@@ -1037,7 +1215,7 @@ export default function App() {
     if (isOnlineMatch) {
       syncToOnline({
         players: updatedPlayers,
-        drawPile,
+        drawPile: updatedDrawPile,
         effectInteraction: null,
         waitingForBattleNext: true,
       });
@@ -1046,12 +1224,32 @@ export default function App() {
 
   const handleSelectInteractionPlayer = (targetPlayer: Player) => {
     if (!effectInteraction) return;
-    const updatedPlayers = [...players];
-    const target = updatedPlayers.find((p) => p.id === targetPlayer.id);
-    if (target) {
-      target.isRevealedToAll = true;
-      addLog(`女王の指名により、${target.name} の手札が全員に公開されました！`, 'effect');
+
+    // Security check: Only the actor can choose!
+    if (humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
+      return;
     }
+
+    const updatedPlayers = [...players];
+    const actor = updatedPlayers.find((p) => p.id === effectInteraction.actorPlayerId);
+    const target = updatedPlayers.find((p) => p.id === targetPlayer.id);
+
+    if (effectInteraction.type === 'QUEEN_SELECT_PLAYER') {
+      if (target) {
+        target.isRevealedToAll = true;
+        addLog(`女王の指名により、${target.name} の手札が全員に公開されました！`, 'effect');
+      }
+    } else if (effectInteraction.type === 'JOKER_SELECT_PLAYER') {
+      if (actor && target && target.hand.length > 0) {
+        const randomIndex = Math.floor(Math.random() * target.hand.length);
+        const stolenCard = target.hand.splice(randomIndex, 1)[0];
+        actor.capturedCards.push(stolenCard);
+        actor.score += stolenCard.points;
+        sound.playVictory();
+        addLog(`${actor.name} は死神の力で ${target.name} の手札からランダムに「${stolenCard.japaneseName}」を刈り取り、自らの得点（+${stolenCard.points}pt）としました！`, 'effect');
+      }
+    }
+
     setPlayers(updatedPlayers);
     setEffectInteraction(null);
     setWaitingForBattleNext(true);
@@ -1105,7 +1303,7 @@ export default function App() {
     (isHumanTurn && gamePhase === 'SELECT_PLAY_CARD') || isHumanChallenged;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none w-full max-w-full overflow-x-hidden">
       
       {/* 3-Zone Header Nav Contract */}
       <HeaderNav
@@ -1125,7 +1323,7 @@ export default function App() {
       />
 
       {/* Main Viewport */}
-      <main className="flex-1 flex flex-col items-center justify-between p-2 sm:p-4 md:p-6 w-full max-w-7xl mx-auto">
+      <main className="flex-1 flex flex-col items-center justify-between p-1.5 sm:p-4 w-full max-w-full sm:max-w-5xl mx-auto box-border overflow-x-hidden">
         {gamePhase === 'TITLE' ? (
           <TitleScreen
             onStartGame={handleStartGame}
@@ -1135,11 +1333,12 @@ export default function App() {
             onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
           />
         ) : (
-          <div className="w-full flex-1 flex flex-col justify-between gap-4">
+          <div className="w-full max-w-full flex-1 flex flex-col justify-between gap-2.5 sm:gap-4 box-border">
             
             {/* Top Area: Opponents */}
             <OpponentsBar
               opponents={opponents}
+              allPlayers={players}
               activePlayerId={players[turnPlayerIndex]?.id}
               isSelectOpponentPhase={isHumanTurn && gamePhase === 'SELECT_OPPONENT'}
               onSelectOpponent={handleHumanSelectOpponent}
@@ -1158,15 +1357,19 @@ export default function App() {
               isRevolution={isRevolution}
               deckCount={drawPile.length}
               discardCount={discardPile.length}
+              viewerPlayerId={isOnlineMatch ? (myOnlinePlayerId || undefined) : humanPlayer?.id}
               onContinue={handleAdvanceTurn}
               waitingForPlayerAction={waitingForBattleNext}
               onStartClash={handleStartClash}
+              onResolveEffects={handleTriggerEffects}
+              onOpenRules={() => setIsRulesOpen(true)}
             />
 
             {/* Bottom Area: Human Player's Rack */}
             {humanPlayer && (
               <CurrentPlayerHand
                 player={humanPlayer}
+                seatNumber={players.findIndex((p) => p.id === humanPlayer?.id) + 1}
                 isMyTurn={isHumanTurn}
                 canPlayCard={canHumanPlayCard}
                 selectedCard={selectedHandCard}
@@ -1180,6 +1383,7 @@ export default function App() {
                 }}
                 turnInstruction={turnInstruction}
                 onInspectPlayer={handleOpenInspectPlayer}
+                onOpenRules={() => setIsRulesOpen(true)}
               />
             )}
 
@@ -1190,6 +1394,8 @@ export default function App() {
       {/* Interactive Effect Modals */}
       <EffectModal
         interaction={effectInteraction}
+        viewerPlayerId={humanPlayer?.id}
+        actorPlayerName={players.find((p) => p.id === effectInteraction?.actorPlayerId)?.name}
         onSelectCard={handleSelectInteractionCard}
         onSelectPlayer={handleSelectInteractionPlayer}
         onClose={() => setEffectInteraction(null)}
@@ -1201,6 +1407,7 @@ export default function App() {
         onClose={() => setIsCodexOpen(false)}
         isRevolution={isRevolution}
         onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
+        onOpenRules={() => setIsRulesOpen(true)}
       />
 
       {/* Rules Modal */}
@@ -1251,6 +1458,17 @@ export default function App() {
         onGameStarted={handleOnlineGameStarted}
         initialRoomCode={initialRoomCode}
       />
+
+      {/* Confirm Challenge Modal */}
+      {confirmingOpponent && (
+        <ConfirmChallengeModal
+          target={confirmingOpponent}
+          challengerCard={challengerCard}
+          seatNumber={players.findIndex((p) => p.id === confirmingOpponent.id) + 1}
+          onConfirm={handleConfirmChallenge}
+          onCancel={handleCancelChallenge}
+        />
+      )}
 
     </div>
   );

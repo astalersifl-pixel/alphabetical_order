@@ -152,7 +152,14 @@ export async function startOnlineGame(roomId: string, players: RoomPlayer[]): Pr
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
-  const gamePlayers: Player[] = players.map((p, idx) => ({
+  // 席順（手番順）をランダムにシャッフル
+  const shuffledPlayers = [...players];
+  for (let i = shuffledPlayers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledPlayers[i], shuffledPlayers[j]] = [shuffledPlayers[j], shuffledPlayers[i]];
+  }
+
+  const gamePlayers: Player[] = shuffledPlayers.map((p, idx) => ({
     id: p.id,
     name: p.name,
     type: 'human',
@@ -165,6 +172,8 @@ export async function startOnlineGame(roomId: string, players: RoomPlayer[]): Pr
     isRevealedToAll: false,
     revealedToPlayers: {},
   }));
+
+  const seatOrderText = gamePlayers.map((p, idx) => `${idx + 1}番手: ${p.name}`).join(' → ');
 
   const initialGameState: OnlineGameState = {
     players: gamePlayers,
@@ -189,7 +198,7 @@ export async function startOnlineGame(roomId: string, players: RoomPlayer[]): Pr
       {
         id: 'start-log',
         turn: 1,
-        text: 'オンライン対戦が開始されました！各プレイヤーに手札が3枚配られました。',
+        text: `オンライン対戦開始！席順（ランダム）: [ ${seatOrderText} ]（手番は時計回りに進行）`,
         type: 'special',
         timestamp: Date.now(),
       },

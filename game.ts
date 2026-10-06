@@ -61,10 +61,11 @@ export interface BattleRecord {
   effectsTriggered: string[];
   revolutionChanged: boolean;
   isRevolutionActiveAtBattle: boolean;
+  effectsResolved?: boolean; // カード効果が処理済みかどうか
 }
 
 export interface EffectInteractionState {
-  type: 'WEREWOLF_SEARCH_DECK' | 'VAMPIRE_STEAL' | 'XENOS_STEAL' | 'QUEEN_SELECT_PLAYER';
+  type: 'WEREWOLF_SEARCH_DECK' | 'VAMPIRE_STEAL' | 'XENOS_STEAL' | 'QUEEN_SELECT_PLAYER' | 'JOKER_SELECT_PLAYER';
   actorPlayerId: string;
   targetPlayerId?: string;
   availableCards?: CardData[];

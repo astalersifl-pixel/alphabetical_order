@@ -7,6 +7,10 @@ import {
   removeCustomCardArtwork,
   clearAllCustomCardArtworks,
   importCustomCardImageFiles,
+  optimizeAndCompressImage,
+  getCardDesignMode,
+  setCardDesignMode,
+  CardDesignMode,
 } from '../utils/customCardImages';
 import { sound } from '../utils/audio';
 import {
@@ -32,6 +36,7 @@ export const CustomImageModal: React.FC<CustomImageModalProps> = ({ isOpen, onCl
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
   const [selectedLetter, setSelectedLetter] = useState<Letter>('A');
+  const [designMode, setDesignModeState] = useState<CardDesignMode>(() => getCardDesignMode());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const singleFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +47,7 @@ export const CustomImageModal: React.FC<CustomImageModalProps> = ({ isOpen, onCl
       map[l] = getCustomCardArtwork(l);
     });
     setLoadedImages(map);
+    setDesignModeState(getCardDesignMode());
   };
 
   useEffect(() => {
@@ -66,15 +72,24 @@ export const CustomImageModal: React.FC<CustomImageModalProps> = ({ isOpen, onCl
 
     if (result.matchedLetters.length > 0) {
       sound.playClick();
-      setStatusMessage(
-        `🎉 ${result.matchedLetters.length}枚のカード画像（${result.matchedLetters.join(
-          ', '
-        )}）を登録・反映しました！`
-      );
+      let msg = `🎉 ${result.matchedLetters.length}枚のカード画像（${result.matchedLetters.join(
+        ', '
+      )}）を自動圧縮して登録・反映しました！`;
+      if (result.unmatchedFiles.length > 0) {
+        msg += ` （※ファイル名からカードを判定できなかったファイル: ${result.unmatchedFiles.slice(0, 3).join(', ')}${
+          result.unmatchedFiles.length > 3 ? '等' : ''
+        }）`;
+      }
+      if (result.failedToSave.length > 0) {
+        msg += ` （※保存できなかったカード: ${result.failedToSave.join(', ')}）`;
+      }
+      setStatusMessage(msg);
       setStatusType('success');
     } else {
       setStatusMessage(
-        '⚠️ 画像のファイル名からカード（A〜Z）を特定できませんでした。「A.jpg」のような名前にしてください。'
+        `⚠️ 画像のファイル名からカード（A〜Z）を特定できませんでした（判定不可: ${result.unmatchedFiles
+          .slice(0, 3)
+          .join(', ')}）。ファイル名に「A」や「太陽神」などのカード名を含めてください。`
       );
       setStatusType('error');
     }
@@ -82,17 +97,21 @@ export const CustomImageModal: React.FC<CustomImageModalProps> = ({ isOpen, onCl
 
   const handleSingleCardUpload = async (letter: Letter, file: File) => {
     try {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setCustomCardArtwork(letter, reader.result as string);
+      setStatusMessage('画像を圧縮・最適化中...');
+      setStatusType('info');
+      const compressed = await optimizeAndCompressImage(file);
+      const success = setCustomCardArtwork(letter, compressed);
+      if (success) {
         sound.playClick();
         refreshImages();
         setStatusMessage(`【${letter}: ${CARD_DATABASE[letter].japaneseName}】の画像を設定しました！`);
         setStatusType('success');
-      };
-      reader.readAsDataURL(file);
+      } else {
+        setStatusMessage(`【${letter}】の画像の保存に失敗しました。`);
+        setStatusType('error');
+      }
     } catch {
-      setStatusMessage('画像の読み込みに失敗しました。');
+      setStatusMessage('画像の読み込み・最適化に失敗しました。');
       setStatusType('error');
     }
   };
@@ -162,6 +181,60 @@ export const CustomImageModal: React.FC<CustomImageModalProps> = ({ isOpen, onCl
               <span className="leading-tight">{statusMessage}</span>
             </div>
           )}
+
+          {/* Card Design Style Selector */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-950/80 border border-amber-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-inner">
+            <div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-amber-300">
+                  カードのデザイン表示スタイル
+                </h3>
+              </div>
+              <p className="text-xs text-stone-400 mt-0.5">
+                用意したイラストをカード全面（イラストのみ）で表示するか、通常枠で表示するか選べます
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-900 p-1.5 rounded-xl border border-white/10 shrink-0 w-full sm:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  setCardDesignMode('art_only');
+                  setDesignModeState('art_only');
+                  setStatusMessage('カードデザインを「イラストのみ（全面表示）」に設定しました！');
+                  setStatusType('success');
+                }}
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  designMode === 'art_only'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-black'
+                    : 'text-stone-400 hover:text-white'
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>🖼️ イラストのみ（全面表示）</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  setCardDesignMode('classic');
+                  setDesignModeState('classic');
+                  setStatusMessage('カードデザインを「通常（テキスト枠あり）」に設定しました！');
+                  setStatusType('info');
+                }}
+                className={`flex-1 sm:flex-initial px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  designMode === 'classic'
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-black'
+                    : 'text-stone-400 hover:text-white'
+                }`}
+              >
+                <span>📝 通常（テキスト枠あり）</span>
+              </button>
+            </div>
+          </div>
 
           {/* Big Batch Drop Zone */}
           <div

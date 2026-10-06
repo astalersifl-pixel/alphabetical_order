@@ -1,11 +1,12 @@
 import React from 'react';
 import { CardData, Player } from '../types/game';
 import { CardView } from './CardView';
-import { Crown, Swords, Eye, Trophy, ShieldCheck } from 'lucide-react';
+import { Crown, Swords, Eye, Trophy, ShieldCheck, HelpCircle } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface OpponentsBarProps {
   opponents: Player[];
+  allPlayers?: Player[];
   activePlayerId: string;
   isSelectOpponentPhase: boolean;
   onSelectOpponent: (opponent: Player) => void;
@@ -15,6 +16,7 @@ interface OpponentsBarProps {
 
 export const OpponentsBar: React.FC<OpponentsBarProps> = ({
   opponents,
+  allPlayers,
   activePlayerId,
   isSelectOpponentPhase,
   onSelectOpponent,
@@ -22,20 +24,22 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
   onInspectPlayer,
 }) => {
   return (
-    <div className="w-full flex items-center justify-center gap-3 sm:gap-6 flex-wrap py-2">
+    <div className="w-full max-w-5xl mx-auto flex items-center justify-center gap-2 sm:gap-6 flex-wrap py-1 sm:py-2 px-1">
       {opponents.map((opponent) => {
         const isCurrentTurn = opponent.id === activePlayerId;
         const isRevealedToViewer =
           opponent.isRevealedToAll || !!opponent.revealedToPlayers[viewerPlayerId];
+        const seatIndex = allPlayers ? allPlayers.findIndex((p) => p.id === opponent.id) : -1;
+        const hasNoHand = opponent.hand.length === 0;
 
         return (
           <div
             key={opponent.id}
-            className={`relative min-w-[210px] sm:min-w-[280px] p-3 rounded-2xl border transition-all ${
+            className={`relative w-full max-w-[320px] sm:max-w-xs p-2.5 sm:p-3 rounded-2xl border transition-all box-border ${
               isCurrentTurn
                 ? 'bg-amber-950/40 border-amber-500/70 shadow-lg shadow-amber-950/30 ring-1 ring-amber-400/40'
                 : 'bg-slate-900/80 border-slate-800 shadow-md'
-            }`}
+            } ${isSelectOpponentPhase && hasNoHand ? 'opacity-60 grayscale-[30%]' : ''}`}
           >
             {/* Player Info Row */}
             <div className="flex items-center justify-between gap-2 mb-2">
@@ -44,11 +48,16 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
                   {opponent.name.slice(0, 1)}
                 </div>
                 <div>
-                  <h4 className="font-serif-jp text-xs sm:text-sm font-bold text-stone-100 flex items-center gap-1">
-                    {opponent.name}
+                  <h4 className="font-serif-jp text-xs sm:text-sm font-bold text-stone-100 flex items-center gap-1.5 flex-wrap">
+                    <span>{opponent.name}</span>
+                    {seatIndex !== -1 && (
+                      <span className="text-[10px] text-amber-300/80 bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/20 font-mono">
+                        席順: {seatIndex + 1}番手
+                      </span>
+                    )}
                     {isCurrentTurn && <Crown className="w-3.5 h-3.5 text-amber-400" />}
                   </h4>
-                  <div className="text-[10px] text-stone-400 font-mono">
+                  <div className={`text-[10px] font-mono ${hasNoHand ? 'text-rose-400 font-bold' : 'text-stone-400'}`}>
                     <span>手札: {opponent.hand.length}枚</span>
                   </div>
                 </div>
@@ -106,22 +115,28 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
                 </div>
               ))}
               {opponent.hand.length === 0 && (
-                <span className="text-xs text-stone-600 italic">手札なし</span>
+                <span className="text-xs text-rose-400/80 font-bold italic">手札なし（0枚）</span>
               )}
             </div>
 
             {/* Challenge Button if selecting opponent */}
             {isSelectOpponentPhase && (
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  onSelectOpponent(opponent);
-                }}
-                className="mt-2.5 w-full py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-serif-jp text-xs font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
-              >
-                <Swords className="w-3.5 h-3.5" />
-                <span>この相手に対戦を挑む</span>
-              </button>
+              !hasNoHand ? (
+                <button
+                  onClick={() => {
+                    sound.playClick();
+                    onSelectOpponent(opponent);
+                  }}
+                  className="mt-2.5 w-full py-1.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-serif-jp text-xs font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer animate-pulse"
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>この相手に対戦を挑む</span>
+                </button>
+              ) : (
+                <div className="mt-2.5 w-full py-1.5 bg-slate-900/90 border border-stone-800 text-stone-500 font-serif-jp text-xs rounded-lg flex items-center justify-center gap-1.5 cursor-not-allowed select-none">
+                  <span>手札がないため対戦不可</span>
+                </div>
+              )
             )}
           </div>
         );
@@ -132,6 +147,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
 
 interface CurrentPlayerHandProps {
   player: Player;
+  seatNumber?: number;
   isMyTurn: boolean;
   canPlayCard: boolean;
   selectedCard: CardData | null;
@@ -139,10 +155,12 @@ interface CurrentPlayerHandProps {
   onConfirmPlayCard: () => void;
   turnInstruction: string;
   onInspectPlayer: (player: Player, tab: 'captured' | 'used') => void;
+  onOpenRules?: () => void;
 }
 
 export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   player,
+  seatNumber,
   isMyTurn,
   canPlayCard,
   selectedCard,
@@ -150,9 +168,10 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   onConfirmPlayCard,
   turnInstruction,
   onInspectPlayer,
+  onOpenRules,
 }) => {
   return (
-    <div className="w-full max-w-5xl mx-auto rounded-3xl p-4 sm:p-5 bg-slate-950/90 border border-amber-900/50 shadow-2xl backdrop-blur-md flex flex-col items-center">
+    <div className="w-full max-w-5xl mx-auto rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 bg-slate-950/90 border border-amber-900/50 shadow-2xl backdrop-blur-md flex flex-col items-center box-border overflow-hidden">
       
       {/* Player Header & Guidance */}
       <div className="w-full flex items-center justify-between flex-wrap gap-2 mb-3 pb-2 border-b border-white/10">
@@ -163,8 +182,13 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
             </div>
           </div>
           <div>
-            <h3 className="font-serif-jp text-sm sm:text-base font-bold text-white flex items-center gap-2">
+            <h3 className="font-serif-jp text-sm sm:text-base font-bold text-white flex items-center gap-2 flex-wrap">
               <span>{player.name} (あなた)</span>
+              {seatNumber !== undefined && (
+                <span className="text-[10px] text-amber-300/80 bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-500/20 font-mono">
+                  席順: {seatNumber}番手
+                </span>
+              )}
               {isMyTurn && (
                 <span className="text-[11px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-bold">
                   あなたのターン
@@ -173,7 +197,7 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
             </h3>
             
             {/* Clickable Public Info Chips */}
-            <div className="flex items-center gap-2 text-xs font-mono mt-1">
+            <div className="flex items-center gap-2 text-xs font-mono mt-1 flex-wrap">
               <span className="text-stone-400">手札: {player.hand.length}枚</span>
               <span className="text-stone-600">·</span>
 
@@ -204,6 +228,24 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
                 <ShieldCheck className="w-3 h-3 text-sky-400" />
                 <span>使用済: {player.usedCards.length}枚</span>
               </button>
+
+              {onOpenRules && (
+                <>
+                  <span className="text-stone-600">·</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      onOpenRules();
+                    }}
+                    className="px-2 py-0.5 rounded bg-amber-950/40 hover:bg-amber-900/50 border border-amber-500/30 text-amber-300 hover:text-amber-200 transition-colors flex items-center gap-1 cursor-pointer"
+                    title="バトル中にルールを確認"
+                  >
+                    <HelpCircle className="w-3 h-3 text-amber-400" />
+                    <span>ルール確認</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -225,8 +267,29 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
 
       {/* Instruction alert */}
       {turnInstruction && (
-        <div className="w-full mb-3 py-1.5 px-3 bg-amber-950/30 border border-amber-500/20 rounded-lg text-xs font-serif-jp text-amber-200 text-center">
+        <div className="w-full mb-2 py-1.5 px-3 bg-amber-950/30 border border-amber-500/20 rounded-lg text-xs font-serif-jp text-amber-200 text-center">
           {turnInstruction}
+        </div>
+      )}
+
+      {/* Selected Card Detail Bar (Extra helpful in Full-Art mode) */}
+      {selectedCard && (
+        <div className="w-full mb-3 p-2.5 bg-slate-900/90 border border-amber-500/40 rounded-xl flex items-center justify-between flex-wrap gap-2 text-xs shadow-md animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="font-cinzel text-sm sm:text-base font-black text-amber-300 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40">
+              {selectedCard.letter}
+            </span>
+            <span className="font-bold text-white font-serif-jp text-xs sm:text-sm">
+              {selectedCard.japaneseName}
+            </span>
+            <span className="text-stone-400 font-mono text-[11px] sm:text-xs">
+              <strong className="text-amber-300 font-bold">{selectedCard.points}pt</strong>
+            </span>
+          </div>
+          <p className="text-amber-100 font-serif-jp text-xs">
+            <span className="text-stone-400 mr-1">効果:</span>
+            {selectedCard.shortEffect}
+          </p>
         </div>
       )}
 

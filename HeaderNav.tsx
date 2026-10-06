@@ -26,29 +26,31 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onOpenCustomImages,
 }) => {
   return (
-    <header className="w-full flex items-center justify-between px-4 sm:px-8 py-3.5 border-b border-amber-900/40 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+    <header className="w-full max-w-full flex items-center justify-between px-2.5 sm:px-6 py-2 sm:py-3.5 border-b border-amber-900/40 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40 overflow-hidden box-border">
       
       {/* Zone 1: Single text element wordmark + Room Code if online */}
-      <div className="flex items-center gap-3">
-        <span className="font-cinzel text-lg sm:text-xl font-bold tracking-tight text-amber-400 whitespace-nowrap">
-          Alphabetical Order
+      <div className="flex items-center gap-1.5 sm:gap-3 shrink min-w-0">
+        <span className="font-cinzel text-xs sm:text-xl font-bold tracking-tight text-amber-400 whitespace-nowrap">
+          <span className="inline sm:hidden">AΩ ORDER</span>
+          <span className="hidden sm:inline">Alphabetical Order</span>
         </span>
 
         {onlineRoomCode && (
           <button
             type="button"
             onClick={onCopyRoomCode}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-950/60 border border-cyan-400/40 text-cyan-300 text-[11px] font-mono hover:bg-cyan-900/50 cursor-pointer transition-colors"
+            className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-cyan-950/70 border border-cyan-400/50 text-cyan-300 text-[10px] sm:text-[11px] font-mono hover:bg-cyan-900/50 cursor-pointer shrink-0"
             title="合言葉をコピーして友達を招待"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-            <span>合言葉: {onlineRoomCode}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="hidden sm:inline">合言葉:</span>
+            <span>{onlineRoomCode}</span>
           </button>
         )}
       </div>
 
-      {/* Zone 2: 4-6 clean text navigation links */}
-      <nav className="hidden md:flex items-center gap-6 text-xs sm:text-sm font-medium text-stone-300">
+      {/* Zone 2: 4-6 clean text navigation links (Desktop only) */}
+      <nav className="hidden md:flex items-center gap-5 text-xs font-medium text-stone-300">
         <button
           onClick={() => {
             sound.playClick();
@@ -96,16 +98,27 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
         )}
       </nav>
 
-      {/* Zone 3: 1-2 primary actions */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      {/* Zone 3: Actions (Responsive, compact on mobile) */}
+      <div className="flex items-center gap-1 sm:gap-2 shrink-0">
         {/* Mobile quick buttons */}
+        <button
+          onClick={() => {
+            sound.playClick();
+            onOpenRules();
+          }}
+          className="md:hidden p-1.5 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
+          title="ルール解説"
+        >
+          <HelpCircle className="w-4 h-4 text-amber-400" />
+        </button>
+
         {onOpenCustomImages && (
           <button
             onClick={() => {
               sound.playClick();
               onOpenCustomImages();
             }}
-            className="md:hidden p-2 text-amber-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            className="md:hidden p-1.5 text-amber-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
             title="自作画像設定"
           >
             <ImageIcon className="w-4 h-4" />
@@ -117,7 +130,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             sound.playClick();
             onOpenCodex();
           }}
-          className="md:hidden p-2 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
+          className="md:hidden p-1.5 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
           title="カード図鑑"
         >
           <BookOpen className="w-4 h-4" />
@@ -128,7 +141,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             sound.playClick();
             onOpenLog();
           }}
-          className="md:hidden p-2 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
+          className="md:hidden p-1.5 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
           title="戦闘ログ"
         >
           <History className="w-4 h-4" />
@@ -140,7 +153,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             sound.playClick();
             onToggleMute();
           }}
-          className="p-2 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
+          className="p-1.5 sm:p-2 text-stone-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition-colors"
           title={isMuted ? 'サウンドON' : 'ミュート'}
         >
           {isMuted ? (
@@ -156,10 +169,11 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
             sound.playClick();
             onNewGame();
           }}
-          className="px-3.5 py-1.5 text-xs font-serif-jp font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 shadow-sm"
+          className="p-1.5 sm:px-3 sm:py-1.5 text-xs font-serif-jp font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 shadow-sm shrink-0"
+          title="新規対戦"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>新規対戦</span>
+          <span className="hidden sm:inline">新規対戦</span>
         </button>
       </div>
 

@@ -91,14 +91,16 @@ export const selectCpuTargetOpponent = (
   cpuPlayer: Player,
   opponents: Player[]
 ): Player => {
-  if (opponents.length === 1) return opponents[0];
+  const eligibleOpponents = opponents.filter((p) => p.hand.length > 0);
+  const pool = eligibleOpponents.length > 0 ? eligibleOpponents : opponents;
+  if (pool.length === 1) return pool[0];
 
   // Prefer challenging the leader (highest score) or someone with revealed hand
-  const sortedByScore = [...opponents].sort((a, b) => b.score - a.score);
+  const sortedByScore = [...pool].sort((a, b) => b.score - a.score);
   if (Math.random() < 0.6) {
     return sortedByScore[0];
   }
-  return opponents[Math.floor(Math.random() * opponents.length)];
+  return pool[Math.floor(Math.random() * pool.length)];
 };
 
 export const selectCpuWerewolfDeckCard = (deck: CardData[], isRevolution: boolean): CardData => {
