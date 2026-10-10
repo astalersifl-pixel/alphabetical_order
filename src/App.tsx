@@ -33,6 +33,7 @@ import { OnlineLobbyModal } from './components/OnlineLobbyModal';
 import { PublicCardsModal } from './components/PublicCardsModal';
 import { CustomImageModal } from './components/CustomImageModal';
 import { ConfirmChallengeModal } from './components/ConfirmChallengeModal';
+import { CardDetailModal } from './components/CardDetailModal';
 import {
   OnlineGameState,
   OnlineRoomData,
@@ -83,6 +84,7 @@ export default function App() {
   const [turnInstruction, setTurnInstruction] = useState<string>('');
   const [waitingForBattleNext, setWaitingForBattleNext] = useState<boolean>(false);
   const [confirmingOpponent, setConfirmingOpponent] = useState<Player | null>(null);
+  const [previewCard, setPreviewCard] = useState<CardData | null>(null);
 
   // Instant Win & Game Over
   const [instantWinWinnerId, setInstantWinWinnerId] = useState<string | null>(null);
@@ -1303,7 +1305,7 @@ export default function App() {
     (isHumanTurn && gamePhase === 'SELECT_PLAY_CARD') || isHumanChallenged;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none w-full max-w-full overflow-x-hidden">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none w-full max-w-full">
       
       {/* 3-Zone Header Nav Contract */}
       <HeaderNav
@@ -1323,7 +1325,7 @@ export default function App() {
       />
 
       {/* Main Viewport */}
-      <main className="flex-1 flex flex-col items-center justify-between p-1.5 sm:p-4 w-full max-w-full sm:max-w-5xl mx-auto box-border overflow-x-hidden">
+      <main className={`flex-1 min-h-0 ${gamePhase === 'TITLE' ? 'overflow-y-auto' : 'overflow-hidden'} flex flex-col items-center justify-between p-1 sm:p-2 w-full max-w-full sm:max-w-5xl mx-auto box-border`}>
         {gamePhase === 'TITLE' ? (
           <TitleScreen
             onStartGame={handleStartGame}
@@ -1333,7 +1335,7 @@ export default function App() {
             onOpenCustomImages={() => setIsCustomImageModalOpen(true)}
           />
         ) : (
-          <div className="w-full max-w-full flex-1 flex flex-col justify-between gap-2.5 sm:gap-4 box-border">
+          <div className="w-full max-w-full flex-1 min-h-0 overflow-hidden flex flex-col justify-between gap-1 sm:gap-2 box-border">
             
             {/* Top Area: Opponents */}
             <OpponentsBar
@@ -1344,6 +1346,7 @@ export default function App() {
               onSelectOpponent={handleHumanSelectOpponent}
               viewerPlayerId={humanPlayer?.id || 'p1'}
               onInspectPlayer={handleOpenInspectPlayer}
+              onInspectCard={(card) => setPreviewCard(card)}
             />
 
             {/* Center Area: Battle Arena */}
@@ -1363,6 +1366,7 @@ export default function App() {
               onStartClash={handleStartClash}
               onResolveEffects={handleTriggerEffects}
               onOpenRules={() => setIsRulesOpen(true)}
+              onInspectCard={(card) => setPreviewCard(card)}
             />
 
             {/* Bottom Area: Human Player's Rack */}
@@ -1384,6 +1388,8 @@ export default function App() {
                 turnInstruction={turnInstruction}
                 onInspectPlayer={handleOpenInspectPlayer}
                 onOpenRules={() => setIsRulesOpen(true)}
+                onOpenCodex={() => setIsCodexOpen(true)}
+                onInspectCard={(card) => setPreviewCard(card)}
               />
             )}
 
@@ -1469,6 +1475,23 @@ export default function App() {
           onCancel={handleCancelChallenge}
         />
       )}
+
+      {/* Card Detail Modal (Separate High-Res Preview Frame) */}
+      <CardDetailModal
+        card={previewCard}
+        isOpen={!!previewCard}
+        onClose={() => setPreviewCard(null)}
+        isRevolution={isRevolution}
+        onSelectCard={
+          canHumanPlayCard
+            ? (card) => {
+                setSelectedHandCard(card);
+                setPreviewCard(null);
+              }
+            : undefined
+        }
+        canPlayCard={canHumanPlayCard}
+      />
 
     </div>
   );
