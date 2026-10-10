@@ -332,6 +332,9 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
                   if (canPlayCard) {
                     sound.playClick();
                     onSelectCard(card);
+                  } else if (onInspectCard) {
+                    sound.playClick();
+                    onInspectCard(card);
                   }
                 }}
                 className="cursor-pointer"

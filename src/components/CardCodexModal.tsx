@@ -35,6 +35,7 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
 }) => {
   const [search, setSearch] = useState('');
   const [activeFilterId, setActiveFilterId] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'text' | 'cards'>('text');
   const [selectedCard, setSelectedCard] = useState<CardData>(CARD_DATABASE.A);
   const [zoomedCard, setZoomedCard] = useState<CardData | null>(null);
 
@@ -102,14 +103,46 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
         <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-amber-900/40 bg-slate-950/80">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="font-cinzel text-lg sm:text-2xl font-bold text-amber-400">
-              Card Codex
+              Card List
             </span>
             <span className="text-[11px] sm:text-xs text-amber-300/70 font-serif-jp">
-              全26枚 カードリスト
+              全26枚 テキスト効果一覧
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-amber-900/40 mr-1">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  setViewMode('text');
+                }}
+                className={`px-2.5 py-1 rounded text-xs font-serif-jp transition-colors cursor-pointer ${
+                  viewMode === 'text'
+                    ? 'bg-amber-500 text-slate-950 font-bold'
+                    : 'text-stone-400 hover:text-amber-300'
+                }`}
+              >
+                テキスト表示
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  setViewMode('cards');
+                }}
+                className={`px-2.5 py-1 rounded text-xs font-serif-jp transition-colors cursor-pointer ${
+                  viewMode === 'cards'
+                    ? 'bg-amber-500 text-slate-950 font-bold'
+                    : 'text-stone-400 hover:text-amber-300'
+                }`}
+              >
+                イラスト表示
+              </button>
+            </div>
+
             {onOpenRules && (
               <button
                 type="button"
@@ -196,46 +229,122 @@ export const CardCodexModal: React.FC<CardCodexModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Main Body (Grid + Detail Preview) */}
+        {/* Modal Main Body (Text List / Card Grid + Detail Preview) */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           
-          {/* Card Grid with "Tap to Zoom" Instruction */}
+          {/* Card Content Area */}
           <div className="flex-1 p-2.5 sm:p-4 overflow-y-auto">
-            <div className="mb-2 text-center text-xs text-amber-300/80 font-serif-jp flex items-center justify-center gap-1.5">
-              <Eye className="w-3.5 h-3.5 text-amber-400" />
-              <span>カードをタップすると拡大表示して詳細を確認できます</span>
-            </div>
+            {viewMode === 'text' ? (
+              /* Text-Based Card List (User Request 4) */
+              <div className="space-y-2">
+                <div className="mb-2 text-xs text-amber-300/80 font-serif-jp flex items-center justify-between">
+                  <span>全26枚 カードテキスト一覧（タップで詳細・イラスト表示）</span>
+                  <span className="text-[11px] text-stone-400">該当: {filteredCards.length}枚</span>
+                </div>
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3.5">
-              {filteredCards.map((card) => {
-                const isSelected = selectedCard.letter === card.letter;
-                return (
-                  <div
-                    key={card.letter}
-                    onClick={() => {
-                      sound.playCardFlip();
-                      setSelectedCard(card);
-                      setZoomedCard(card);
-                    }}
-                    className={`flex flex-col items-center cursor-pointer transition-transform group relative ${
-                      isSelected ? 'scale-102 ring-2 ring-amber-400/60 rounded-xl' : 'hover:scale-102'
-                    }`}
-                  >
-                    <CardView
-                      card={card}
-                      size="sm"
-                      selected={isSelected}
-                      isPlayable={true}
-                    />
-                    <div className="mt-1 text-center w-full">
-                      <span className="text-[11px] font-bold text-amber-300 font-cinzel block">
-                        {card.letter}: {card.japaneseName}
-                      </span>
+                {filteredCards.map((card) => {
+                  const isSelected = selectedCard.letter === card.letter;
+                  return (
+                    <div
+                      key={card.letter}
+                      onClick={() => {
+                        sound.playClick();
+                        setSelectedCard(card);
+                      }}
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 ${
+                        isSelected
+                          ? 'bg-amber-950/60 border-amber-400 ring-1 ring-amber-400/50 shadow-md'
+                          : 'bg-slate-900/80 border-amber-900/30 hover:border-amber-500/40 hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/50 flex items-center justify-center font-cinzel font-black text-amber-300 text-base shrink-0 shadow">
+                          {card.letter}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="font-serif-jp font-bold text-stone-100 text-sm">
+                              {card.japaneseName}
+                            </span>
+                            <span className="font-cinzel text-xs text-stone-400">
+                              ({card.name})
+                            </span>
+                            <span className="font-mono text-xs font-bold text-amber-400 px-1.5 py-0.2 rounded bg-amber-950/60 border border-amber-500/30">
+                              {card.points}pt
+                            </span>
+                            <span className="text-[11px] text-stone-400 font-serif-jp">
+                              {isRevolution
+                                ? `(革命中序列: ${card.letter})`
+                                : `(通常序列: ${card.letter})`}
+                            </span>
+                          </div>
+                          {/* User requested text format: "A：ゲーム終了時に自分の手札にあった場合、10ポイント加える。" */}
+                          <p className="font-serif-jp text-xs sm:text-sm text-amber-100 leading-relaxed">
+                            <span className="font-bold text-amber-300 font-cinzel">{card.letter}：</span>
+                            <span className="font-medium">{card.description}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sound.playCardFlip();
+                            setSelectedCard(card);
+                            setZoomedCard(card);
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-amber-500 hover:text-slate-950 border border-amber-500/30 text-amber-300 text-xs font-serif-jp transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>イラスト拡大</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Illustration Cards Grid Mode */
+              <div>
+                <div className="mb-2 text-center text-xs text-amber-300/80 font-serif-jp flex items-center justify-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
+                  <span>カードをタップすると拡大表示して詳細を確認できます</span>
+                </div>
+
+                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3.5">
+                  {filteredCards.map((card) => {
+                    const isSelected = selectedCard.letter === card.letter;
+                    return (
+                      <div
+                        key={card.letter}
+                        onClick={() => {
+                          sound.playCardFlip();
+                          setSelectedCard(card);
+                          setZoomedCard(card);
+                        }}
+                        className={`flex flex-col items-center cursor-pointer transition-transform group relative ${
+                          isSelected ? 'scale-102 ring-2 ring-amber-400/60 rounded-xl' : 'hover:scale-102'
+                        }`}
+                      >
+                        <CardView
+                          card={card}
+                          size="sm"
+                          selected={isSelected}
+                          isPlayable={true}
+                        />
+                        <div className="mt-1 text-center w-full">
+                          <span className="text-[11px] font-bold text-amber-300 font-cinzel block">
+                            {card.letter}: {card.japaneseName}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop Right Detail Pane (Visible on md and above) */}

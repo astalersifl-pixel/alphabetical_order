@@ -26,7 +26,7 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({
   onOpenCustomImages,
 }) => {
   return (
-    <header className="w-full max-w-full flex items-center justify-between px-2.5 sm:px-6 py-2 sm:py-3.5 border-b border-amber-900/40 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40 overflow-hidden box-border">
+    <header className="w-full max-w-full flex items-center justify-between px-2.5 sm:px-6 py-1.5 sm:py-2 border-b border-amber-900/40 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40 overflow-hidden box-border">
       
       {/* Zone 1: Single text element wordmark + Room Code if online */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink min-w-0">

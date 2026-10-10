@@ -52,13 +52,13 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
   const isChallengerWinner = battleRecord?.winnerId === challenger?.id;
   const isDefenderWinner = battleRecord?.winnerId === defender?.id;
 
-  // Only participants (challenger or defender) or spectators watching 2 CPUs can trigger actions
+  // Only participants (challenger or defender) can trigger clash actions (spectators watch auto-reveal)
   const isParticipant =
     !viewerPlayerId ||
     viewerPlayerId === challenger?.id ||
     viewerPlayerId === defender?.id;
   const isBothCpu = challenger?.type === 'cpu' && defender?.type === 'cpu';
-  const canControl = isParticipant || isBothCpu;
+  const canControl = isParticipant && !isBothCpu;
   const effectsResolved = battleRecord?.effectsResolved ?? false;
 
   return (
@@ -202,7 +202,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   )}
 
                   {/* Enlarge inspect button */}
-                  {battleReveal && onInspectCard && (
+                  {onInspectCard && (battleReveal || viewerPlayerId === challenger?.id) && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -310,7 +310,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   )}
 
                   {/* Enlarge inspect button */}
-                  {battleReveal && onInspectCard && (
+                  {onInspectCard && (battleReveal || viewerPlayerId === defender?.id) && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -445,6 +445,7 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                     className="mt-0.5 py-1.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black font-serif-jp text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 animate-pulse"
                   >
                     <span>次のターンへ進む</span>
+                    {isBothCpu && <span className="text-[10px] font-normal opacity-75">（自動進行）</span>}
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 )}

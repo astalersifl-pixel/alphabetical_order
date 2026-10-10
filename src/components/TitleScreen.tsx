@@ -40,31 +40,27 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       </div>
 
       {/* Main Card Container (Compact & 1-Screen Fit) */}
-      <div className="relative z-10 w-full max-w-lg sm:max-w-xl bg-slate-900/90 border border-amber-500/40 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl backdrop-blur-xl flex flex-col items-center text-center box-border my-auto">
+      <div className="relative z-10 w-full max-w-lg sm:max-w-xl bg-slate-900/95 border border-amber-500/40 rounded-2xl sm:rounded-3xl p-3 sm:p-4.5 shadow-2xl backdrop-blur-xl flex flex-col items-center text-center box-border my-auto max-h-[98vh] overflow-hidden">
         
         {/* Crest & Title Row */}
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-amber-500/60 flex items-center justify-center bg-amber-500/10 text-amber-400">
-            <Crown className="w-3.5 h-3.5" />
+        <div className="flex items-center justify-center gap-1.5 mb-0.5">
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-amber-500/60 flex items-center justify-center bg-amber-500/10 text-amber-400">
+            <Crown className="w-3 h-3" />
           </div>
-          <span className="font-cinzel tracking-widest text-[10px] sm:text-xs uppercase text-amber-400 font-bold">
+          <span className="font-cinzel tracking-widest text-[9px] sm:text-[11px] uppercase text-amber-400 font-bold">
             Tactical Card Battle
           </span>
-          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full border border-amber-500/60 flex items-center justify-center bg-amber-500/10 text-amber-400">
-            <Swords className="w-3.5 h-3.5" />
+          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-amber-500/60 flex items-center justify-center bg-amber-500/10 text-amber-400">
+            <Swords className="w-3 h-3" />
           </div>
         </div>
 
-        <h1 className="font-cinzel text-2xl sm:text-4xl font-black text-amber-400 tracking-tight drop-shadow-md">
+        <h1 className="font-cinzel text-xl sm:text-3xl font-black text-amber-400 tracking-tight drop-shadow-md">
           Alphabetical Order
         </h1>
-        <h2 className="font-serif-jp text-xs sm:text-sm font-bold text-stone-200 tracking-wider mb-1.5 sm:mb-2">
+        <h2 className="font-serif-jp text-xs sm:text-sm font-bold text-stone-200 tracking-wider mb-1 sm:mb-1.5">
           ～勇者と魔王～
         </h2>
-
-        <p className="font-serif-jp text-[11px] sm:text-xs text-stone-300 max-w-md mb-2 sm:mb-2.5 leading-snug hidden sm:block">
-          A～Zの26枚に封じられた心理戦。勇者が魔王を狩るか、革命が秩序を覆すか。
-        </p>
 
         {/* Online Multiplayer Banner (Compact) */}
         <button
@@ -73,27 +69,27 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             sound.playClick();
             onOpenOnline();
           }}
-          className="w-full p-2 sm:p-2.5 rounded-xl bg-gradient-to-r from-cyan-950/80 via-indigo-950/70 to-slate-900 border border-cyan-400/60 hover:border-cyan-300 shadow-lg text-left transition-all cursor-pointer group flex items-center justify-between mb-2 sm:mb-2.5"
+          className="w-full p-1.5 sm:p-2 rounded-xl bg-gradient-to-r from-cyan-950/80 via-indigo-950/70 to-slate-900 border border-cyan-400/60 hover:border-cyan-300 shadow-md text-left transition-all cursor-pointer group flex items-center justify-between mb-1.5 sm:mb-2"
         >
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shrink-0 group-hover:scale-105 transition-transform">
-              <Globe className="w-4 h-4 animate-pulse" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shrink-0 group-hover:scale-105 transition-transform">
+              <Globe className="w-3.5 h-3.5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-serif-jp text-xs sm:text-sm font-black text-cyan-300 group-hover:text-cyan-200">
-                  オンライン対戦（通信対戦）
+                  オンライン通信対戦
                 </span>
                 <span className="bg-cyan-500/20 border border-cyan-400/50 text-[9px] text-cyan-300 font-bold px-1.5 py-0.2 rounded-full">
                   リアルタイム
                 </span>
               </div>
-              <p className="text-[10px] text-stone-300 font-serif-jp">
-                合言葉や招待リンクで離れた友達とすぐ遊べます
+              <p className="text-[10px] text-stone-300 font-serif-jp hidden xs:block">
+                合言葉や招待リンクで離れた友達と対戦可能
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[11px] font-bold font-serif-jp shrink-0 group-hover:bg-cyan-500/30 transition-colors">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 text-[10px] font-bold font-serif-jp shrink-0 group-hover:bg-cyan-500/30 transition-colors">
             <span>入室・作成</span>
             <span>→</span>
           </div>
