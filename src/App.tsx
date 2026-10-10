@@ -1325,7 +1325,7 @@ export default function App() {
       />
 
       {/* Main Viewport */}
-      <main className={`flex-1 min-h-0 ${gamePhase === 'TITLE' ? 'overflow-y-auto' : 'overflow-hidden'} flex flex-col items-center justify-between p-1 sm:p-2 w-full max-w-full sm:max-w-5xl mx-auto box-border`}>
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col items-center justify-between p-1 sm:p-2 w-full max-w-full sm:max-w-5xl mx-auto box-border">
         {gamePhase === 'TITLE' ? (
           <TitleScreen
             onStartGame={handleStartGame}
