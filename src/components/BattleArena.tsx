@@ -278,9 +278,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           {/* Defender Slot */}
           <div className="flex flex-col items-center gap-1 relative">
             <div className="flex items-center gap-1">
-              <span className="text-xs sm:text-sm font-serif-jp text-sky-300 font-bold tracking-wide">
-                {defender?.name ?? '防衛側'}
+              <span className={`text-xs sm:text-sm font-serif-jp font-bold tracking-wide ${
+                defender ? 'text-sky-300' : 'text-stone-400'
+              }`}>
+                {defender?.name ?? '相手を選択中...'}
               </span>
+              {defender && !battleReveal && (
+                <span className="px-1.5 py-0.2 rounded-full bg-rose-600/90 border border-rose-400 text-white text-[9px] font-black uppercase flex items-center gap-0.5 shadow-sm animate-pulse">
+                  <Swords className="w-2.5 h-2.5 fill-white" />
+                  <span>対戦相手</span>
+                </span>
+              )}
               {battleReveal && isDefenderWinner && (
                 <span className="px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 text-[10px] font-black uppercase flex items-center gap-0.5 shadow animate-pulse">
                   <Crown className="w-3 h-3 fill-slate-950" />
@@ -350,8 +358,20 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                   )}
                 </div>
               ) : (
-                <div className="w-20 sm:w-24 h-28 sm:h-36 border-2 border-dashed border-sky-900/40 rounded-lg flex flex-col items-center justify-center bg-slate-950/40 text-stone-500 text-[10px] p-2 text-center">
-                  <span>応戦待機中</span>
+                <div className={`w-20 sm:w-24 h-28 sm:h-36 border-2 border-dashed rounded-lg flex flex-col items-center justify-center p-2 text-center transition-all ${
+                  defender
+                    ? 'border-rose-500/80 bg-rose-950/20 text-rose-300 ring-2 ring-rose-500/30 animate-pulse'
+                    : 'border-sky-900/40 bg-slate-950/40 text-stone-500'
+                }`}>
+                  {defender ? (
+                    <>
+                      <Swords className="w-4 h-4 text-rose-400 mb-1 animate-bounce" />
+                      <span className="text-[11px] font-bold text-rose-200 font-serif-jp">{defender.name}</span>
+                      <span className="text-[9px] text-rose-300/80 mt-0.5">応戦カード選択中</span>
+                    </>
+                  ) : (
+                    <span className="text-[10px]">相手未定</span>
+                  )}
                 </div>
               )}
             </div>
