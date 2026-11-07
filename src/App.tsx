@@ -1491,6 +1491,7 @@ export default function App() {
               opponents={opponents}
               allPlayers={players}
               activePlayerId={players[turnPlayerIndex]?.id}
+              defenderId={defenderId}
               isSelectOpponentPhase={isHumanTurn && gamePhase === 'SELECT_OPPONENT'}
               onSelectOpponent={handleHumanSelectOpponent}
               viewerPlayerId={humanPlayer?.id || 'p1'}
@@ -1524,6 +1525,7 @@ export default function App() {
                 player={humanPlayer}
                 seatNumber={players.findIndex((p) => p.id === humanPlayer?.id) + 1}
                 isMyTurn={isHumanTurn}
+                isChallenged={isHumanChallenged}
                 canPlayCard={canHumanPlayCard}
                 selectedCard={selectedHandCard}
                 onSelectCard={setSelectedHandCard}
