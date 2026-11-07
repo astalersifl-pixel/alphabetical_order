@@ -31,10 +31,10 @@ export const CardView: React.FC<CardViewProps> = ({
 }) => {
   // Dimension tokens
   const sizeStyles = {
-    mini: 'w-12 sm:w-14 h-16 sm:h-20 text-[9px] rounded',
-    sm: 'w-20 sm:w-24 h-28 sm:h-36 text-xs rounded-lg',
-    md: 'w-28 sm:w-36 h-40 sm:h-52 text-xs rounded-xl',
-    lg: 'w-36 sm:w-48 h-52 sm:h-72 text-sm rounded-2xl',
+    mini: 'w-11 sm:w-13 h-15 sm:h-18 text-[9px] rounded',
+    sm: 'w-[72px] sm:w-22 h-[102px] sm:h-32 text-[11px] rounded-lg',
+    md: 'w-24 sm:w-32 h-34 sm:h-46 text-xs rounded-xl',
+    lg: 'w-32 sm:w-44 h-46 sm:h-64 text-sm rounded-2xl',
   }[size];
 
   if (faceDown || !card) {
