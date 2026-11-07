@@ -623,7 +623,7 @@ export default function App() {
         const hasHumanParticipant = activeChallenger.type === 'human' || activeDefender.type === 'human';
 
         if (hasHumanParticipant) {
-          setTurnInstruction(`両者のカードが伏せられました。「勝負する！」を押して開示してください！`);
+          setTurnInstruction(`両者のカードが伏せられました。「バトル！」を押して開示してください！`);
           setGamePhase('READY_TO_CLASH');
         } else {
           // Both are CPUs: reveal cards, show clash outcome, then resolve effects automatically
@@ -672,7 +672,7 @@ export default function App() {
     sound.playCardFlip();
     addLog(`${defender.name} は応戦カードを伏せて出しました！`, 'battle');
 
-    const clashInstruction = '両者のカードが揃いました！「勝負する！」を押してオープンしてください！';
+    const clashInstruction = '両者のカードが揃いました！「バトル！」を押してオープンしてください！';
     setTurnInstruction(clashInstruction);
     setGamePhase('READY_TO_CLASH');
 
