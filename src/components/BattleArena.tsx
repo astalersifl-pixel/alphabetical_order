@@ -227,21 +227,45 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             <span className="text-[9px] text-amber-500/60 font-serif-jp">【先攻 / 攻撃側】</span>
           </div>
 
-          {/* VS Center Marker */}
-          <div className="flex flex-col items-center justify-center px-0.5 shrink-0">
-            <div
-              className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center shadow-lg transition-all duration-300 ${
-                battleReveal
-                  ? 'bg-amber-500 border-amber-300 text-slate-950 scale-105 shadow-amber-500/50'
-                  : 'bg-slate-900 border-amber-500/50 text-amber-400'
-              }`}
-            >
-              <Swords className={`w-4 h-4 sm:w-5 sm:h-5 ${battleReveal ? 'animate-spin [animation-iteration-count:1]' : 'animate-pulse'}`} />
-            </div>
+          {/* VS Center Marker & Battle Action Button */}
+          <div className="flex flex-col items-center justify-center px-1 shrink-0 z-30 min-w-[72px] sm:min-w-[88px]">
+            {!battleReveal && challengerCard && defenderCard && onStartClash ? (
+              canControl ? (
+                <button
+                  type="button"
+                  onClick={onStartClash}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black font-serif-jp text-xs sm:text-sm rounded-xl shadow-xl hover:shadow-amber-500/50 transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 animate-bounce ring-2 ring-amber-400/60 whitespace-nowrap"
+                  title="勝負を開示する"
+                >
+                  <Swords className="w-3.5 h-3.5" />
+                  <span>バトル！</span>
+                </button>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-1 rounded-xl bg-slate-900/90 border border-amber-500/40 text-amber-300 text-[10px] font-serif-jp text-center shadow">
+                  <div className="flex items-center gap-1 font-bold">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
+                    <span>対戦中</span>
+                  </div>
+                  <span className="text-[9px] text-stone-400 scale-90">待機中...</span>
+                </div>
+              )
+            ) : (
+              <>
+                <div
+                  className={`relative w-8 h-8 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center shadow-lg transition-all duration-300 ${
+                    battleReveal
+                      ? 'bg-amber-500 border-amber-300 text-slate-950 scale-105 shadow-amber-500/50'
+                      : 'bg-slate-900 border-amber-500/50 text-amber-400'
+                  }`}
+                >
+                  <Swords className={`w-4 h-4 sm:w-5 sm:h-5 ${battleReveal ? 'animate-spin [animation-iteration-count:1]' : 'animate-pulse'}`} />
+                </div>
 
-            <span className="font-cinzel text-[10px] font-black text-amber-400/90 tracking-widest mt-0.5">
-              VS
-            </span>
+                <span className="font-cinzel text-[10px] font-black text-amber-400/90 tracking-widest mt-0.5">
+                  VS
+                </span>
+              </>
+            )}
 
             {/* Clash Result compare label */}
             {battleReveal && challengerCard && defenderCard && (
@@ -336,28 +360,6 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
           </div>
 
         </div>
-
-        {/* Action Button: "勝負する！" */}
-        {!battleReveal && challengerCard && defenderCard && onStartClash && (
-          <div className="mt-2 sm:mt-3 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200 z-30">
-            {canControl ? (
-              <button
-                type="button"
-                onClick={onStartClash}
-                className="px-6 py-2 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black font-serif-jp text-xs sm:text-sm rounded-xl shadow-xl hover:shadow-amber-500/40 transition-all flex items-center gap-2 cursor-pointer active:scale-95 animate-bounce ring-2 ring-amber-400/50"
-              >
-                <Swords className="w-4 h-4" />
-                <span>いざ、勝負する！</span>
-                <Sparkles className="w-4 h-4 fill-slate-950" />
-              </button>
-            ) : (
-              <div className="px-4 py-1.5 bg-slate-900/90 border border-amber-500/40 rounded-xl text-amber-200 font-serif-jp text-xs flex items-center gap-2 shadow">
-                <div className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>対戦者（{challenger?.name} vs {defender?.name}）の開示を待機中...</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Battle Dramatic Outcome & Effects Section (Compact & Contained) */}
         {battleReveal && battleRecord && (
