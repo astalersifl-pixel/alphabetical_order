@@ -88,28 +88,17 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         </>
       )}
 
-      {/* Top Bar: Revolution Status & Pile Counters (Compact) */}
+      {/* Top Bar: Pile Counters & Revolution Banner only if active */}
       <div className="w-full flex items-center justify-between z-10 px-1 sm:px-2 py-0.5 shrink-0">
-        {/* Revolution status banner */}
-        <div
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] sm:text-xs font-serif-jp font-bold transition-all ${
-            isRevolution
-              ? 'bg-rose-950/90 border-rose-500 text-rose-300 shadow-md ring-1 ring-rose-500/40 animate-pulse'
-              : 'bg-slate-900/80 border-amber-900/60 text-amber-300'
-          }`}
-        >
-          {isRevolution ? (
-            <>
-              <Flame className="w-3.5 h-3.5 text-rose-400 fill-rose-500 animate-bounce shrink-0" />
-              <span>革命発動中 【 Z最強 ＞ A最弱 】</span>
-            </>
-          ) : (
-            <>
-              <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>通常秩序 【 A最強 ＞ Z最弱 】</span>
-            </>
-          )}
-        </div>
+        {/* Only show banner when Revolution is active */}
+        {isRevolution ? (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-rose-500 bg-rose-950/90 text-rose-300 text-[10px] font-serif-jp font-bold shadow animate-pulse">
+            <Flame className="w-3 h-3 text-rose-400 fill-rose-500 animate-bounce shrink-0" />
+            <span>革命中 (Z最強)</span>
+          </div>
+        ) : (
+          <div />
+        )}
 
         {/* Deck & Graveyard counter + Quick Rules button */}
         <div className="flex items-center gap-1.5 text-xs font-mono text-stone-300">
@@ -117,21 +106,21 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
             <button
               type="button"
               onClick={onOpenRules}
-              className="flex items-center gap-1 bg-amber-950/60 hover:bg-amber-900/70 border border-amber-500/50 px-2 py-0.5 rounded-lg text-amber-300 text-[11px] font-serif-jp transition-colors cursor-pointer shrink-0"
+              className="flex items-center gap-1 bg-amber-950/60 hover:bg-amber-900/70 border border-amber-500/50 px-1.5 py-0.2 rounded-lg text-amber-300 text-[10px] font-serif-jp transition-colors cursor-pointer shrink-0"
               title="ルール解説を確認"
             >
-              <HelpCircle className="w-3 h-3 text-amber-400" />
+              <HelpCircle className="w-2.5 h-2.5 text-amber-400" />
               <span>ルール</span>
             </button>
           )}
 
-          <div className="flex items-center gap-1 bg-slate-900/80 border border-amber-900/40 px-2 py-0.5 rounded-lg text-[11px]">
+          <div className="flex items-center gap-1 bg-slate-900/80 border border-amber-900/40 px-1.5 py-0.2 rounded-lg text-[10px]">
             <span className="text-amber-400 font-bold">山札:</span>
             <span className="tabular-nums font-bold text-stone-100">{deckCount}</span>
-            <span className="text-stone-500 text-[10px]">枚</span>
+            <span className="text-stone-500 text-[9px]">枚</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-900/80 border border-stone-800 px-2 py-0.5 rounded-lg text-[11px]">
+          <div className="flex items-center gap-1 bg-slate-900/80 border border-stone-800 px-1.5 py-0.2 rounded-lg text-[10px]">
             <span className="text-stone-400">墓地:</span>
             <span className="tabular-nums text-stone-300">{discardCount}</span>
           </div>
@@ -273,6 +262,44 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                 {challengerCard.letter} {isChallengerWinner ? '＞' : '＜'} {defenderCard.letter}
               </div>
             )}
+
+            {/* Direct Advance Button right beneath K > O (User Request) */}
+            {battleReveal && battleRecord && (
+              <div className="mt-1 flex flex-col items-center z-40">
+                {/* Step 1: Proceed to Card Effects */}
+                {!effectsResolved && (
+                  canControl ? (
+                    <button
+                      type="button"
+                      onClick={onResolveEffects}
+                      className="px-2.5 py-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black font-serif-jp text-[11px] rounded-lg shadow-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95 animate-bounce ring-2 ring-emerald-400/50 whitespace-nowrap"
+                    >
+                      <Sparkles className="w-3 h-3 fill-slate-950" />
+                      <span>効果へ進む</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  ) : (
+                    <div className="px-2 py-0.5 bg-slate-900/90 border border-emerald-500/40 rounded-lg text-emerald-300 font-serif-jp text-[9px] flex items-center gap-1 whitespace-nowrap">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>待機中...</span>
+                    </div>
+                  )
+                )}
+
+                {/* Step 2: Proceed to Next Turn */}
+                {effectsResolved && onContinue && waitingForPlayerAction && (
+                  <button
+                    type="button"
+                    onClick={onContinue}
+                    className="px-2.5 py-1 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-black font-serif-jp text-[11px] rounded-lg shadow-lg transition-all flex items-center gap-1 cursor-pointer active:scale-95 animate-pulse ring-2 ring-amber-400/60 whitespace-nowrap"
+                  >
+                    <span>次へ進む</span>
+                    {isBothCpu && <span className="text-[8px] font-normal opacity-75">(自動)</span>}
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Defender Slot */}
@@ -385,54 +412,37 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
         {battleReveal && battleRecord && (
           <div className="mt-2 w-full max-w-md flex flex-col items-center text-center gap-1.5 animate-in fade-in duration-300 shrink-0">
             
-            {/* Stage 1: Card Reveal & Winner Announcement (Before Effects) */}
+            {/* Stage 1: Winner Announcement (Before Effects) */}
             {!effectsResolved && (
-              <div className="w-full flex flex-col items-center gap-1.5">
-                <div className="p-1.5 px-4 bg-slate-900/95 border border-amber-500/50 rounded-xl text-xs sm:text-sm text-stone-100 shadow-lg flex items-center justify-center gap-2">
-                  <Crown className="w-4 h-4 text-amber-400 fill-amber-400 animate-bounce" />
+              <div className="w-full flex items-center justify-center">
+                <div className="py-0.5 px-3 bg-slate-900/95 border border-amber-500/50 rounded-lg text-xs text-stone-100 shadow flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-bounce" />
                   <span className="font-bold text-amber-300 font-serif-jp">
                     {battleRecord.winnerId === challenger?.id ? challenger?.name : defender?.name}
                   </span>
-                  <span className="font-serif-jp font-bold">の勝利！</span>
+                  <span className="font-serif-jp">の勝利！</span>
                 </div>
-
-                {canControl ? (
-                  <button
-                    type="button"
-                    onClick={onResolveEffects}
-                    className="py-1.5 px-5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black font-serif-jp text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 animate-bounce ring-2 ring-emerald-400/40"
-                  >
-                    <Sparkles className="w-4 h-4 fill-slate-950" />
-                    <span>カードの効果へ進む</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <div className="px-4 py-1 bg-slate-900/90 border border-emerald-500/30 rounded-xl text-emerald-200 font-serif-jp text-[11px] flex items-center gap-1.5 shadow">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>カード効果の発動を待機中...</span>
-                  </div>
-                )}
               </div>
             )}
 
-            {/* Stage 2: Effects Breakdown & Next Turn Button */}
+            {/* Stage 2: Effects Breakdown */}
             {effectsResolved && (
               <>
                 {/* Instant Victory */}
                 {battleRecord.instantWinWinnerId && (
-                  <div className="p-2 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 rounded-xl font-bold font-serif-jp shadow-lg flex items-center justify-center gap-1.5 text-xs sm:text-sm animate-bounce border-2 border-amber-200">
-                    <Crown className="w-4 h-4 fill-slate-950" />
+                  <div className="py-1 px-2.5 w-full bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 rounded-lg font-bold font-serif-jp shadow flex items-center justify-center gap-1 text-xs animate-bounce border border-amber-200">
+                    <Crown className="w-3.5 h-3.5 fill-slate-950" />
                     <span>
-                      【特異点完全勝利】
+                      【完全勝利】
                       {battleRecord.instantWinWinnerId === challenger?.id ? challenger?.name : defender?.name}
-                      の宿命的勝利！
+                      の勝利！
                     </span>
                   </div>
                 )}
 
                 {/* Normal Outcome Pill */}
                 {!battleRecord.instantWinWinnerId && (
-                  <div className="py-1 px-3 bg-slate-900/95 border border-amber-500/40 rounded-xl text-xs text-stone-100 shadow flex items-center gap-2">
+                  <div className="py-0.5 px-2.5 bg-slate-900/95 border border-amber-500/40 rounded-lg text-[11px] text-stone-100 shadow flex items-center gap-1.5">
                     <span className="font-bold text-amber-300">
                       {battleRecord.winnerId === challenger?.id ? challenger?.name : defender?.name}
                     </span>
@@ -440,36 +450,23 @@ export const BattleArena: React.FC<BattleArenaProps> = ({
                     <span className="text-amber-400 font-mono font-bold">
                       +{battleRecord.winnerId === challenger?.id ? defenderCard?.points : challengerCard?.points}pt
                     </span>
-                    <span className="text-stone-400 text-[10px]">(獲得)</span>
+                    <span className="text-stone-400 text-[9px]">(獲得)</span>
                   </div>
                 )}
 
                 {/* Effects triggered breakdown (Scrollable if many) */}
                 {battleRecord.effectsTriggered.length > 0 && (
-                  <div className="max-h-[60px] sm:max-h-[80px] overflow-y-auto space-y-1 w-full px-1">
+                  <div className="max-h-[44px] overflow-y-auto space-y-0.5 w-full px-1">
                     {battleRecord.effectsTriggered.map((effect, idx) => (
                       <div
                         key={idx}
-                        className="py-1 px-2.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-[11px] flex items-center justify-center gap-1.5 shadow"
+                        className="py-0.5 px-2 rounded bg-emerald-950/80 border border-emerald-500/40 text-emerald-200 text-[10px] flex items-center justify-center gap-1 shadow"
                       >
-                        <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+                        <Sparkles className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
                         <span className="font-serif-jp font-medium truncate">{effect}</span>
                       </div>
                     ))}
                   </div>
-                )}
-
-                {/* Next Turn Button */}
-                {onContinue && waitingForPlayerAction && (
-                  <button
-                    type="button"
-                    onClick={onContinue}
-                    className="mt-0.5 py-1.5 px-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black font-serif-jp text-xs sm:text-sm rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 animate-pulse"
-                  >
-                    <span>次のターンへ進む</span>
-                    {isBothCpu && <span className="text-[10px] font-normal opacity-75">（自動進行）</span>}
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
                 )}
               </>
             )}
