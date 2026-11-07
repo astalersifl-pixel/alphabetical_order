@@ -28,7 +28,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
   onInspectCard,
 }) => {
   return (
-    <div className="w-full max-w-5xl mx-auto flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap py-0.5 px-1 shrink-0">
+    <div className="w-full max-w-5xl mx-auto flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto py-0.5 px-1 shrink-0 no-scrollbar">
       {opponents.map((opponent) => {
         const isCurrentTurn = opponent.id === activePlayerId;
         const isDefender = opponent.id === defenderId;
@@ -40,115 +40,94 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
         return (
           <div
             key={opponent.id}
-            className={`relative flex-1 min-w-[220px] max-w-[320px] p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border transition-all box-border ${
+            onClick={() => {
+              if (isSelectOpponentPhase && !hasNoHand) {
+                sound.playClick();
+                onSelectOpponent(opponent);
+              }
+            }}
+            className={`relative flex-1 min-w-[100px] sm:min-w-[140px] max-w-[200px] p-1 sm:p-1.5 rounded-lg sm:rounded-xl border transition-all box-border ${
+              isSelectOpponentPhase && !hasNoHand ? 'cursor-pointer hover:scale-102 hover:border-rose-400' : ''
+            } ${
               isDefender
-                ? 'bg-gradient-to-r from-rose-950/80 via-red-950/60 to-slate-900 border-rose-500 ring-2 ring-rose-400 shadow-xl shadow-rose-950/60 scale-[1.02] z-20'
+                ? 'bg-gradient-to-r from-rose-950/90 via-red-950/70 to-slate-900 border-rose-500 ring-2 ring-rose-400 shadow-lg shadow-rose-950/60 scale-[1.02] z-20'
                 : isCurrentTurn
-                ? 'bg-amber-950/40 border-amber-500/70 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40'
-                : 'bg-slate-900/80 border-slate-800 shadow-sm'
-            } ${isSelectOpponentPhase && hasNoHand ? 'opacity-60 grayscale-[30%]' : ''}`}
+                ? 'bg-amber-950/40 border-amber-500/70 shadow-sm ring-1 ring-amber-400/40'
+                : 'bg-slate-900/80 border-slate-800'
+            } ${isSelectOpponentPhase && hasNoHand ? 'opacity-50 grayscale-[40%]' : ''}`}
           >
-            {/* Prominent Defender Target Badge */}
-            {isDefender && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-rose-600 via-red-500 to-rose-600 text-white text-[10px] sm:text-[11px] font-black font-serif-jp shadow-lg border border-rose-300 flex items-center gap-1 animate-bounce whitespace-nowrap">
-                <Swords className="w-3 h-3 fill-white" />
-                <span>対戦相手（防衛側）に選出中！</span>
-              </div>
-            )}
-            {/* Player Info Row */}
-            <div className="flex items-center justify-between gap-1.5 mb-1">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-800 border border-stone-600 flex items-center justify-center font-bold text-[11px] text-amber-300 shrink-0">
+            {/* Top row: Name + Hand count */}
+            <div className="flex items-center justify-between gap-1 mb-0.5">
+              <div className="flex items-center gap-1 min-w-0">
+                <div className={`w-5 h-5 rounded-full border flex items-center justify-center font-bold text-[10px] shrink-0 ${
+                  isDefender ? 'bg-rose-600 border-rose-300 text-white' : 'bg-slate-800 border-stone-600 text-amber-300'
+                }`}>
                   {opponent.name.slice(0, 1)}
                 </div>
-                <div className="min-w-0">
-                  <h4 className="font-serif-jp text-xs font-bold text-stone-100 flex items-center gap-1 truncate">
-                    <span className="truncate">{opponent.name}</span>
-                    {seatIndex !== -1 && (
-                      <span className="text-[9px] text-amber-300/80 bg-amber-950/60 px-1 py-0.2 rounded border border-amber-500/20 font-mono shrink-0">
-                        {seatIndex + 1}番手
-                      </span>
-                    )}
-                    {isCurrentTurn && <Crown className="w-3 h-3 text-amber-400 shrink-0 animate-bounce" />}
-                  </h4>
-                </div>
+                <h4 className="font-serif-jp text-[11px] sm:text-xs font-bold text-stone-100 truncate flex items-center gap-0.5">
+                  <span className="truncate">{opponent.name}</span>
+                  {isCurrentTurn && <Crown className="w-2.5 h-2.5 text-amber-400 shrink-0" />}
+                </h4>
               </div>
 
-              {/* Hand count badge */}
-              <div className={`text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950/60 border border-stone-800 shrink-0 ${hasNoHand ? 'text-rose-400 font-bold' : 'text-stone-300'}`}>
-                手札: {opponent.hand.length}枚
-              </div>
+              {/* Hand count pill */}
+              <span className={`text-[9px] font-mono px-1 py-0.2 rounded shrink-0 ${
+                hasNoHand
+                  ? 'bg-rose-950/80 text-rose-300 border border-rose-500/30'
+                  : 'bg-slate-950/60 text-stone-300 border border-stone-800'
+              }`}>
+                {opponent.hand.length}枚
+              </span>
             </div>
 
-            {/* Public Info Row & Hand preview */}
-            <div className="flex items-center justify-between gap-1 text-[10px] font-serif-jp">
-              {/* Score pill */}
+            {/* Bottom row: Score & status badges */}
+            <div className="flex items-center justify-between gap-1 text-[9px]">
+              {/* Score Button */}
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   sound.playClick();
                   onInspectPlayer(opponent, 'captured');
                 }}
-                className="px-1.5 py-0.5 rounded bg-amber-950/40 hover:bg-amber-900/40 border border-amber-500/30 text-amber-300 font-medium flex items-center gap-1 transition-colors cursor-pointer truncate"
-                title="獲得ポイントカードを確認"
+                className="px-1 py-0.2 rounded bg-amber-950/40 hover:bg-amber-900/40 border border-amber-500/30 text-amber-300 font-mono font-bold flex items-center gap-0.5 cursor-pointer truncate"
+                title="獲得ポイントを確認"
               >
-                <Trophy className="w-3 h-3 text-amber-400 shrink-0" />
-                <span className="font-mono font-bold">{opponent.score}pt</span>
+                <Trophy className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                <span>{opponent.score}pt</span>
               </button>
 
-              {/* Used cards pill */}
-              <button
-                type="button"
-                onClick={() => {
-                  sound.playClick();
-                  onInspectPlayer(opponent, 'used');
-                }}
-                className="px-1.5 py-0.5 rounded bg-sky-950/40 hover:bg-sky-900/40 border border-sky-500/30 text-sky-300 font-medium flex items-center gap-1 transition-colors cursor-pointer truncate"
-                title="使用済みカードを確認"
-              >
-                <ShieldCheck className="w-3 h-3 text-sky-400 shrink-0" />
-                <span>済:{opponent.usedCards.length}</span>
-              </button>
+              {/* Defender badge or Select prompt */}
+              {isDefender ? (
+                <span className="bg-rose-600 text-white font-bold px-1 py-0.2 rounded text-[8px] animate-pulse whitespace-nowrap">
+                  ⚔対戦相手
+                </span>
+              ) : isSelectOpponentPhase && !hasNoHand ? (
+                <span className="bg-amber-500 text-slate-950 font-bold px-1 py-0.2 rounded text-[8px] animate-bounce whitespace-nowrap">
+                  選択する
+                </span>
+              ) : seatIndex !== -1 ? (
+                <span className="text-[9px] text-stone-400 font-mono">
+                  {seatIndex + 1}番手
+                </span>
+              ) : null}
 
-              {/* Revealed cards preview or challenge button */}
-              {isRevealedToViewer && (
-                <div className="flex items-center gap-0.5">
-                  <Eye className="w-3 h-3 text-purple-300 shrink-0" />
-                  {opponent.hand.slice(0, 3).map((card, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => onInspectCard?.(card)}
-                      className="px-1 py-0.2 rounded bg-purple-900/60 border border-purple-400/40 text-[9px] font-cinzel font-bold text-purple-200 hover:bg-purple-700 hover:scale-105 transition-all cursor-pointer"
-                      title="クリックして別枠で詳細を見る"
-                    >
-                      {card.letter}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Challenge Button if selecting opponent */}
-            {isSelectOpponentPhase && (
-              !hasNoHand ? (
+              {/* Peek button if hand is revealed */}
+              {isRevealedToViewer && opponent.hand.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    sound.playClick();
-                    onSelectOpponent(opponent);
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onInspectCard?.(opponent.hand[0]);
                   }}
-                  className="mt-1 w-full py-1 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-serif-jp text-[11px] font-bold rounded-lg shadow transition-all flex items-center justify-center gap-1 cursor-pointer animate-pulse"
+                  className="px-1 py-0.2 rounded bg-purple-900/70 border border-purple-400/50 text-[8px] text-purple-200 font-bold flex items-center gap-0.5"
+                  title="公開された手札を確認"
                 >
-                  <Swords className="w-3 h-3" />
-                  <span>この相手に対戦を挑む</span>
+                  <Eye className="w-2.5 h-2.5 text-purple-300" />
+                  <span>公開</span>
                 </button>
-              ) : (
-                <div className="mt-1 w-full py-0.5 bg-slate-900/90 border border-stone-800 text-stone-500 font-serif-jp text-[10px] rounded-lg flex items-center justify-center gap-1 cursor-not-allowed select-none">
-                  <span>手札なし（対戦不可）</span>
-                </div>
-              )
-            )}
+              )}
+            </div>
           </div>
         );
       })}
