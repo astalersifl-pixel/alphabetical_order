@@ -8,6 +8,7 @@ interface OpponentsBarProps {
   opponents: Player[];
   allPlayers?: Player[];
   activePlayerId: string;
+  defenderId?: string | null;
   isSelectOpponentPhase: boolean;
   onSelectOpponent: (opponent: Player) => void;
   viewerPlayerId: string;
@@ -19,6 +20,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
   opponents,
   allPlayers,
   activePlayerId,
+  defenderId,
   isSelectOpponentPhase,
   onSelectOpponent,
   viewerPlayerId,
@@ -29,6 +31,7 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
     <div className="w-full max-w-5xl mx-auto flex items-center justify-center gap-1.5 sm:gap-3 flex-wrap py-0.5 px-1 shrink-0">
       {opponents.map((opponent) => {
         const isCurrentTurn = opponent.id === activePlayerId;
+        const isDefender = opponent.id === defenderId;
         const isRevealedToViewer =
           opponent.isRevealedToAll || !!opponent.revealedToPlayers[viewerPlayerId];
         const seatIndex = allPlayers ? allPlayers.findIndex((p) => p.id === opponent.id) : -1;
@@ -38,11 +41,20 @@ export const OpponentsBar: React.FC<OpponentsBarProps> = ({
           <div
             key={opponent.id}
             className={`relative flex-1 min-w-[220px] max-w-[320px] p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border transition-all box-border ${
-              isCurrentTurn
+              isDefender
+                ? 'bg-gradient-to-r from-rose-950/80 via-red-950/60 to-slate-900 border-rose-500 ring-2 ring-rose-400 shadow-xl shadow-rose-950/60 scale-[1.02] z-20'
+                : isCurrentTurn
                 ? 'bg-amber-950/40 border-amber-500/70 shadow-md shadow-amber-950/30 ring-1 ring-amber-400/40'
                 : 'bg-slate-900/80 border-slate-800 shadow-sm'
             } ${isSelectOpponentPhase && hasNoHand ? 'opacity-60 grayscale-[30%]' : ''}`}
           >
+            {/* Prominent Defender Target Badge */}
+            {isDefender && (
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 z-30 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-rose-600 via-red-500 to-rose-600 text-white text-[10px] sm:text-[11px] font-black font-serif-jp shadow-lg border border-rose-300 flex items-center gap-1 animate-bounce whitespace-nowrap">
+                <Swords className="w-3 h-3 fill-white" />
+                <span>対戦相手（防衛側）に選出中！</span>
+              </div>
+            )}
             {/* Player Info Row */}
             <div className="flex items-center justify-between gap-1.5 mb-1">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -148,6 +160,7 @@ interface CurrentPlayerHandProps {
   player: Player;
   seatNumber?: number;
   isMyTurn: boolean;
+  isChallenged?: boolean;
   canPlayCard: boolean;
   selectedCard: CardData | null;
   onSelectCard: (card: CardData) => void;
@@ -163,6 +176,7 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   player,
   seatNumber,
   isMyTurn,
+  isChallenged = false,
   canPlayCard,
   selectedCard,
   onSelectCard,
@@ -174,7 +188,13 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
   onInspectCard,
 }) => {
   return (
-    <div className="w-full max-w-5xl mx-auto rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 bg-slate-950/95 border border-amber-900/50 shadow-2xl backdrop-blur-md flex flex-col items-center box-border shrink-0">
+    <div
+      className={`w-full max-w-5xl mx-auto rounded-xl sm:rounded-2xl p-1.5 sm:p-2.5 transition-all shadow-2xl backdrop-blur-md flex flex-col items-center box-border shrink-0 ${
+        isChallenged
+          ? 'bg-gradient-to-r from-rose-950/90 via-red-950/70 to-slate-950 border-2 border-rose-500 ring-2 ring-rose-400 shadow-rose-950/60'
+          : 'bg-slate-950/95 border border-amber-900/50'
+      }`}
+    >
       
       {/* Player Header & Guidance Row */}
       <div className="w-full flex items-center justify-between gap-1.5 mb-1 pb-1 border-b border-white/10 text-xs">
@@ -196,6 +216,12 @@ export const CurrentPlayerHand: React.FC<CurrentPlayerHandProps> = ({
             {isMyTurn && (
               <span className="text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded-full font-black animate-pulse shrink-0">
                 あなたの手番
+              </span>
+            )}
+            {isChallenged && (
+              <span className="text-[10px] bg-gradient-to-r from-rose-600 to-red-500 text-white px-2 py-0.5 rounded-full font-black animate-bounce shadow border border-rose-300 flex items-center gap-1 shrink-0">
+                <Swords className="w-3 h-3 fill-white" />
+                <span>対戦相手に選ばれました！応戦してください</span>
               </span>
             )}
           </div>
