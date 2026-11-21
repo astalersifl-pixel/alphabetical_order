@@ -102,7 +102,7 @@ export const ConfirmChallengeModal: React.FC<ConfirmChallengeModalProps> = ({
               sound.playClick();
               onCancel();
             }}
-            className="flex-1 py-2.5 px-4 rounded-xl border border-stone-700 bg-slate-800/80 hover:bg-slate-700/80 text-stone-300 hover:text-white font-serif-jp text-xs sm:text-sm font-medium transition-colors cursor-pointer"
+            className="flex-1 touch-manipulation py-2.5 px-4 rounded-xl border border-stone-700 bg-slate-800/80 hover:bg-slate-700/80 text-stone-300 hover:text-white font-serif-jp text-xs sm:text-sm font-medium transition-colors cursor-pointer"
           >
             キャンセル
           </button>
@@ -113,7 +113,7 @@ export const ConfirmChallengeModal: React.FC<ConfirmChallengeModalProps> = ({
               sound.playClick();
               onConfirm();
             }}
-            className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-serif-jp text-xs sm:text-sm font-bold shadow-lg shadow-rose-950/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            className="flex-1 touch-manipulation py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-serif-jp text-xs sm:text-sm font-bold shadow-lg shadow-rose-950/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Swords className="w-4 h-4" />
             <span>対戦を挑む！</span>
