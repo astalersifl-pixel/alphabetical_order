@@ -62,8 +62,9 @@ export default function App() {
   const [myOnlinePlayerId, setMyOnlinePlayerId] = useState<string | null>(null);
   const [isOnlineMatch, setIsOnlineMatch] = useState<boolean>(false);
   const isRemoteSyncRef = useRef<boolean>(false);
-  const cpuAutoAdvanceTimer = useRef<NodeJS.Timeout | null>(null);
-  const cpuTurnTimer = useRef<NodeJS.Timeout | null>(null);
+  const cpuAutoAdvanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cpuTurnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cpuDefenderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Public Cards Inspector State
   const [inspectPlayer, setInspectPlayer] = useState<Player | null>(null);
@@ -110,6 +111,31 @@ export default function App() {
     sound.setMuted(next);
   };
 
+  const latestRef = useRef({
+    players,
+    drawPile,
+    discardPile,
+    turnPlayerIndex,
+    turnNumber,
+    isRevolution,
+    challengerId,
+    defenderId,
+    battleRecord,
+    instantWinWinnerId,
+  });
+  latestRef.current = {
+    players,
+    drawPile,
+    discardPile,
+    turnPlayerIndex,
+    turnNumber,
+    isRevolution,
+    challengerId,
+    defenderId,
+    battleRecord,
+    instantWinWinnerId,
+  };
+
   // Check for ?room= in URL on mount and cleanup timers on unmount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,6 +147,7 @@ export default function App() {
     return () => {
       if (cpuAutoAdvanceTimer.current) clearTimeout(cpuAutoAdvanceTimer.current);
       if (cpuTurnTimer.current) clearTimeout(cpuTurnTimer.current);
+      if (cpuDefenderTimer.current) clearTimeout(cpuDefenderTimer.current);
     };
   }, []);
 
@@ -217,6 +244,16 @@ export default function App() {
       setIsRevolution(s.isRevolution);
       setTurnNumber(s.turnNumber);
       setGamePhase(s.gamePhase);
+      setChallengerId(s.challengerId ?? s.players[s.turnPlayerIndex]?.id ?? null);
+      setDefenderId(s.defenderId ?? null);
+      setChallengerCard(s.challengerCard ?? null);
+      setDefenderCard(s.defenderCard ?? null);
+      setBattleReveal(s.battleReveal ?? false);
+      setBattleRecord(s.battleRecord ?? null);
+      setWaitingForBattleNext(s.waitingForBattleNext ?? false);
+      setInstantWinWinnerId(s.instantWinWinnerId ?? null);
+      setInstantWinReason(s.instantWinReason ?? '');
+      setEffectInteraction(s.effectInteraction ?? null);
       setTurnInstruction(s.turnInstruction);
       setGameLogs(s.gameLogs || []);
     }
@@ -344,6 +381,10 @@ export default function App() {
       clearTimeout(cpuTurnTimer.current);
       cpuTurnTimer.current = null;
     }
+    if (cpuDefenderTimer.current) {
+      clearTimeout(cpuDefenderTimer.current);
+      cpuDefenderTimer.current = null;
+    }
 
     // 1. Check if draw pile is empty -> Game Over
     if (currentDrawPile.length === 0) {
@@ -385,6 +426,14 @@ export default function App() {
     setSelectedHandCard(null);
     setWaitingForBattleNext(false);
 
+    latestRef.current.turnPlayerIndex = playerIndex;
+    latestRef.current.players = updatedPlayers;
+    latestRef.current.drawPile = newDrawPile;
+    latestRef.current.turnNumber = currentTurnNumber;
+    latestRef.current.challengerId = activePlayer.id;
+    latestRef.current.defenderId = null;
+    latestRef.current.battleRecord = null;
+
     // 3. Human vs CPU branch
     if (activePlayer.type === 'human') {
       const instruction = `${activePlayer.name} の手番です。手札から場に出すカードを1枚選択してください。`;
@@ -415,13 +464,14 @@ export default function App() {
       setGamePhase('SELECT_PLAY_CARD');
 
       const updatedActivePlayer = updatedPlayers[playerIndex];
+      const currentRev = latestRef.current.isRevolution;
       // Execute CPU turn after realistic thinking delay
       cpuTurnTimer.current = setTimeout(() => {
         executeCpuAttackerTurn(
           updatedActivePlayer,
           updatedPlayers,
           newDrawPile,
-          isRevolution
+          currentRev
         );
       }, 900);
     }
@@ -474,6 +524,9 @@ export default function App() {
     setChallengerCard(card);
     setChallengerId(cpuPlayer.id);
     setDefenderId(target.id);
+    latestRef.current.players = updatedPlayers;
+    latestRef.current.challengerId = cpuPlayer.id;
+    latestRef.current.defenderId = target.id;
 
     sound.playCardFlip();
     addLog(`${cpuPlayer.name} はカードを伏せて場に出し、${target.name} にバトルを挑みました！`, 'battle');
@@ -498,6 +551,8 @@ export default function App() {
     setChallengerCard(selectedHandCard);
     setChallengerId(activePlayer.id);
     setSelectedHandCard(null);
+    latestRef.current.players = updatedPlayers;
+    latestRef.current.challengerId = activePlayer.id;
 
     sound.playCardFlip();
 
@@ -506,8 +561,12 @@ export default function App() {
 
     if (validOpponents.length === 0) {
       // Return card to active player hand and advance turn
-      updatedPlayers[turnPlayerIndex].hand.push(selectedHandCard);
+      updatedPlayers[turnPlayerIndex] = {
+        ...updatedPlayers[turnPlayerIndex],
+        hand: [...updatedPlayers[turnPlayerIndex].hand, selectedHandCard],
+      };
       setPlayers(updatedPlayers);
+      latestRef.current.players = updatedPlayers;
       setChallengerCard(null);
       addLog(`対戦可能な手札を持つ相手がいないため、バトルはスキップされました。`, 'turn');
       setTurnInstruction('対戦相手全員に手札がないため、次の手番へ進みます。');
@@ -519,14 +578,27 @@ export default function App() {
 
     if (opponents.length === 1 && validOpponents.length === 1) {
       // 2-player match: show confirmation dialog before challenging
+      setGamePhase('SELECT_OPPONENT');
       setConfirmingOpponent(validOpponents[0]);
       setTurnInstruction(`${validOpponents[0].name} に対戦を挑みますか？確認してください。`);
+      if (isOnlineMatch) {
+        syncToOnline({
+          players: updatedPlayers,
+          challengerId: activePlayer.id,
+          defenderId: null,
+          challengerCard: selectedHandCard,
+          gamePhase: 'SELECT_OPPONENT',
+          turnInstruction: `${activePlayer.name} がカードを伏せました。対戦相手を確認中...`,
+        });
+      }
     } else {
       setTurnInstruction('バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）');
       setGamePhase('SELECT_OPPONENT');
       if (isOnlineMatch) {
         syncToOnline({
           players: updatedPlayers,
+          challengerId: activePlayer.id,
+          defenderId: null,
           challengerCard: selectedHandCard,
           gamePhase: 'SELECT_OPPONENT',
           turnInstruction: 'バトルを挑む対戦相手を選択してください。（※手札のない相手は選択不可）',
@@ -548,12 +620,25 @@ export default function App() {
   const handleConfirmChallenge = () => {
     if (!confirmingOpponent) return;
     const target = confirmingOpponent;
+    const currentPlayers = latestRef.current.players;
+    const activePlayer = currentPlayers[latestRef.current.turnPlayerIndex];
+    if (!activePlayer) return;
+
     setConfirmingOpponent(null);
     setDefenderId(target.id);
-    const activePlayer = players[turnPlayerIndex];
+    setChallengerId(activePlayer.id);
+    latestRef.current.defenderId = target.id;
+    latestRef.current.challengerId = activePlayer.id;
     addLog(`${activePlayer.name} は ${target.name} に対戦を挑みました！`, 'battle');
     if (challengerCard) {
-      handleDefenderTurn(activePlayer, target, challengerCard, players, isRevolution, drawPile.length);
+      handleDefenderTurn(
+        activePlayer,
+        target,
+        challengerCard,
+        currentPlayers,
+        latestRef.current.isRevolution,
+        latestRef.current.drawPile.length
+      );
     }
   };
 
@@ -588,12 +673,18 @@ export default function App() {
     currentRevolution: boolean,
     currentDeckCount: number
   ) {
+    if (cpuDefenderTimer.current) {
+      clearTimeout(cpuDefenderTimer.current);
+      cpuDefenderTimer.current = null;
+    }
     setGamePhase('OPPONENT_SELECT_CARD');
 
     if (defender.type === 'cpu') {
       setTurnInstruction(`${defender.name} が応戦するカードを選択中...`);
-      setTimeout(() => {
-        const defenderPlayer = currentPlayers.find((p) => p.id === defender.id)!;
+      cpuDefenderTimer.current = setTimeout(() => {
+        const defenderPlayer = currentPlayers.find((p) => p.id === defender.id);
+        if (!defenderPlayer || defenderPlayer.hand.length === 0) return;
+
         const card = selectCpuCardToPlay({
           cpuPlayer: defenderPlayer,
           allPlayers: currentPlayers,
@@ -613,6 +704,7 @@ export default function App() {
         });
 
         setPlayers(updatedPlayers);
+        latestRef.current.players = updatedPlayers;
         setDefenderCard(card);
 
         sound.playCardFlip();
@@ -629,9 +721,9 @@ export default function App() {
           // Both are CPUs: reveal cards, show clash outcome, then resolve effects automatically
           setTurnInstruction(`【観戦】${activeChallenger.name} vs ${activeDefender.name}！ 勝負を開示します...`);
           setGamePhase('READY_TO_CLASH');
-          setTimeout(() => {
+          cpuDefenderTimer.current = setTimeout(() => {
             startClashReveal(currentChallengerCard, card, updatedPlayers, currentRevolution, activeChallenger, activeDefender);
-            setTimeout(() => {
+            cpuDefenderTimer.current = setTimeout(() => {
               resolveBattleEffects(currentChallengerCard, card, updatedPlayers, currentRevolution, activeChallenger, activeDefender);
             }, 2200);
           }, 1200);
@@ -644,6 +736,7 @@ export default function App() {
       if (isOnlineMatch) {
         syncToOnline({
           players: currentPlayers,
+          challengerId: challenger.id,
           challengerCard: currentChallengerCard,
           defenderId: defender.id,
           gamePhase: 'OPPONENT_SELECT_CARD',
@@ -666,6 +759,7 @@ export default function App() {
       hand: defender.hand.filter((c) => c.letter !== selectedHandCard.letter),
     };
     setPlayers(updatedPlayers);
+    latestRef.current.players = updatedPlayers;
     setDefenderCard(selectedHandCard);
     setSelectedHandCard(null);
 
@@ -677,8 +771,11 @@ export default function App() {
     setGamePhase('READY_TO_CLASH');
 
     if (isOnlineMatch) {
+      const resolvedChallengerId = challengerId || players[turnPlayerIndex]?.id || null;
       syncToOnline({
         players: updatedPlayers,
+        challengerId: resolvedChallengerId,
+        defenderId: defender.id,
         defenderCard: selectedHandCard,
         gamePhase: 'READY_TO_CLASH',
         turnInstruction: clashInstruction,
@@ -686,17 +783,22 @@ export default function App() {
     }
   };
 
-  // Trigger clash reveal on "勝負する！" button click
+  // Trigger clash reveal on "バトル！" button click
   const handleStartClash = () => {
     if (!challengerCard || !defenderCard) return;
-    const chPlayer = players.find((p) => p.id === challengerId);
+    const chPlayer = players.find((p) => p.id === challengerId) || players[turnPlayerIndex];
     const defPlayer = players.find((p) => p.id === defenderId);
     if (!chPlayer || !defPlayer) return;
 
-    const viewerId = isOnlineMatch ? myOnlinePlayerId : humanPlayer?.id;
-    // Non-participants cannot trigger clash button
-    if (viewerId && viewerId !== chPlayer.id && viewerId !== defPlayer.id) {
-      return;
+    if (isOnlineMatch) {
+      if (myOnlinePlayerId && myOnlinePlayerId !== chPlayer.id && myOnlinePlayerId !== defPlayer.id) {
+        return;
+      }
+    } else if (!isLocalMultiHuman) {
+      const viewerId = humanPlayer?.id;
+      if (viewerId && viewerId !== chPlayer.id && viewerId !== defPlayer.id) {
+        return;
+      }
     }
 
     sound.playClick();
@@ -716,9 +818,22 @@ export default function App() {
     setBattleReveal(true);
     sound.playClash();
 
-    const activeChallengerId = challengerPlayer?.id || challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
-    const challenger = challengerPlayer || currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
-    const defender = defenderPlayer || currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
+    const activeChallengerId =
+      challengerPlayer?.id ||
+      latestRef.current.challengerId ||
+      currentPlayers[latestRef.current.turnPlayerIndex]?.id ||
+      currentPlayers[0]?.id;
+    const challenger =
+      challengerPlayer ||
+      currentPlayers.find((p) => p.id === activeChallengerId) ||
+      currentPlayers[latestRef.current.turnPlayerIndex] ||
+      currentPlayers[0];
+    const defender =
+      defenderPlayer ||
+      currentPlayers.find((p) => p.id === latestRef.current.defenderId) ||
+      currentPlayers.find((p) => p.id !== challenger.id) ||
+      currentPlayers[1] ||
+      currentPlayers[0];
 
     // Compare cards
     const comp = compareCards(cCard, dCard, currentRevolution);
@@ -728,7 +843,7 @@ export default function App() {
     addLog(`【開示】${challenger.name}の「${cCard.letter}: ${cCard.japaneseName}」 vs ${defender.name}の「${dCard.letter}: ${dCard.japaneseName}」！ 勝者：${winner.name}`, 'battle');
 
     const initialRecord: BattleRecord = {
-      turnNumber,
+      turnNumber: latestRef.current.turnNumber,
       challengerId: challenger.id,
       challengerCard: cCard,
       defenderId: defender.id,
@@ -742,14 +857,17 @@ export default function App() {
       effectsResolved: false,
     };
     setBattleRecord(initialRecord);
+    latestRef.current.battleRecord = initialRecord;
 
-    const revealInstruction = `${winner.name} の勝利！「カードの効果へ進む」を押してカード効果を発動してください。`;
+    const revealInstruction = `${winner.name} の勝利！「効果へ進む」を押してカード効果を発動してください。`;
     setTurnInstruction(revealInstruction);
 
     if (isOnlineMatch) {
       syncToOnline({
         battleReveal: true,
         battleRecord: initialRecord,
+        challengerId: challenger.id,
+        defenderId: defender.id,
         challengerCard: cCard,
         defenderCard: dCard,
         gamePhase: 'BATTLE_REVEAL',
@@ -759,17 +877,22 @@ export default function App() {
     }
   }
 
-  // Trigger card effects on "カードの効果へ進む" button click
+  // Trigger card effects on "効果へ進む" button click
   const handleTriggerEffects = () => {
     if (!challengerCard || !defenderCard) return;
-    const chPlayer = players.find((p) => p.id === challengerId);
+    const chPlayer = players.find((p) => p.id === challengerId) || players[turnPlayerIndex];
     const defPlayer = players.find((p) => p.id === defenderId);
     if (!chPlayer || !defPlayer) return;
 
-    const viewerId = isOnlineMatch ? myOnlinePlayerId : humanPlayer?.id;
-    // Non-participants cannot trigger effects button
-    if (viewerId && viewerId !== chPlayer.id && viewerId !== defPlayer.id) {
-      return;
+    if (isOnlineMatch) {
+      if (myOnlinePlayerId && myOnlinePlayerId !== chPlayer.id && myOnlinePlayerId !== defPlayer.id) {
+        return;
+      }
+    } else if (!isLocalMultiHuman) {
+      const viewerId = humanPlayer?.id;
+      if (viewerId && viewerId !== chPlayer.id && viewerId !== defPlayer.id) {
+        return;
+      }
     }
 
     sound.playClick();
@@ -785,9 +908,22 @@ export default function App() {
     challengerPlayer?: Player,
     defenderPlayer?: Player
   ) {
-    const activeChallengerId = challengerPlayer?.id || challengerId || currentPlayers[turnPlayerIndex]?.id || currentPlayers[0]?.id;
-    let challenger = challengerPlayer || currentPlayers.find((p) => p.id === activeChallengerId) || currentPlayers[turnPlayerIndex] || currentPlayers[0];
-    let defender = defenderPlayer || currentPlayers.find((p) => p.id === defenderId) || currentPlayers.find((p) => p.id !== challenger.id) || currentPlayers[1] || currentPlayers[0];
+    const activeChallengerId =
+      challengerPlayer?.id ||
+      latestRef.current.challengerId ||
+      currentPlayers[latestRef.current.turnPlayerIndex]?.id ||
+      currentPlayers[0]?.id;
+    let challenger =
+      challengerPlayer ||
+      currentPlayers.find((p) => p.id === activeChallengerId) ||
+      currentPlayers[latestRef.current.turnPlayerIndex] ||
+      currentPlayers[0];
+    let defender =
+      defenderPlayer ||
+      currentPlayers.find((p) => p.id === latestRef.current.defenderId) ||
+      currentPlayers.find((p) => p.id !== challenger.id) ||
+      currentPlayers[1] ||
+      currentPlayers[0];
 
     // Compare cards
     const comp = compareCards(cCard, dCard, currentRevolution);
@@ -856,7 +992,7 @@ export default function App() {
     let loserDraws = 0;
     let leviathanShuffle = false;
     let interactionNeeded: EffectInteractionState | null = null;
-    let currentDrawPile = [...drawPile];
+    let currentDrawPile = [...latestRef.current.drawPile];
 
     if (!isUnicornNegated && !instantWinner) {
       // Check Revolutionary (R) - Winner effect
@@ -865,6 +1001,7 @@ export default function App() {
         newRevolution = !currentRevolution;
         revChanged = true;
         setIsRevolution(newRevolution);
+        latestRef.current.isRevolution = newRevolution;
         sound.playRevolution();
         effects.push(`革命発生！カード強弱が逆転！ (${newRevolution ? 'Zが最強、Aが最弱' : '通常秩序に戻る'})`);
         addLog(`革命家の演説が響き渡る！ 世界の序列が逆転しました！（${newRevolution ? 'Z最強' : 'A最強'}）`, 'special');
@@ -1178,7 +1315,7 @@ export default function App() {
 
     // Save record
     const record: BattleRecord = {
-      turnNumber,
+      turnNumber: latestRef.current.turnNumber,
       challengerId: challenger.id,
       challengerCard: cCard,
       defenderId: defender.id,
@@ -1192,19 +1329,24 @@ export default function App() {
       effectsResolved: true,
     };
     setBattleRecord(record);
+    latestRef.current.battleRecord = record;
 
     if (instantWinner) {
       setInstantWinWinnerId(instantWinner);
       setInstantWinReason(instantReason);
+      latestRef.current.instantWinWinnerId = instantWinner;
     }
 
     // Update state with updated players and new draw pile
-    setPlayers([...currentPlayers]);
+    const nextPlayersSnapshot = [...currentPlayers];
+    setPlayers(nextPlayersSnapshot);
     setDrawPile(currentDrawPile);
+    latestRef.current.players = nextPlayersSnapshot;
+    latestRef.current.drawPile = currentDrawPile;
 
     const postEffectInstruction = interactionNeeded
       ? interactionNeeded.description
-      : '効果の処理が完了しました。「次のターンへ進む」を押してください。';
+      : '効果の処理が完了しました。「次へ進む」を押してください。';
     setTurnInstruction(postEffectInstruction);
 
     // If interaction modal needed (e.g. human Werewolf search, Vampire steal)
@@ -1228,10 +1370,12 @@ export default function App() {
     // Sync battle result to online room
     if (isOnlineMatch) {
       syncToOnline({
-        players: [...currentPlayers],
+        players: nextPlayersSnapshot,
         drawPile: currentDrawPile,
-        discardPile: [...discardPile],
+        discardPile: [...latestRef.current.discardPile],
         isRevolution: newRevolution,
+        challengerId: challenger.id,
+        defenderId: defender.id,
         battleRecord: record,
         battleReveal: true,
         challengerCard: cCard,
@@ -1258,15 +1402,24 @@ export default function App() {
       clearTimeout(cpuTurnTimer.current);
       cpuTurnTimer.current = null;
     }
+    if (cpuDefenderTimer.current) {
+      clearTimeout(cpuDefenderTimer.current);
+      cpuDefenderTimer.current = null;
+    }
 
-    if (instantWinWinnerId) {
+    const latest = latestRef.current;
+
+    if (latest.instantWinWinnerId) {
       setGamePhase('GAME_OVER');
       if (isOnlineMatch) syncToOnline({ gamePhase: 'GAME_OVER' });
       return;
     }
 
     // Did Devil fight conclude?
-    if (battleRecord && (battleRecord.challengerCard.letter === 'D' || battleRecord.defenderCard.letter === 'D')) {
+    if (
+      latest.battleRecord &&
+      (latest.battleRecord.challengerCard.letter === 'D' || latest.battleRecord.defenderCard.letter === 'D')
+    ) {
       addLog('魔王の出現により世界が閉ざされました。ゲーム終了！', 'special');
       setGamePhase('GAME_OVER');
       if (isOnlineMatch) syncToOnline({ gamePhase: 'GAME_OVER' });
@@ -1274,7 +1427,7 @@ export default function App() {
     }
 
     // Is draw pile empty?
-    if (drawPile.length === 0) {
+    if (latest.drawPile.length === 0) {
       addLog('山札が尽きたためゲーム終了！', 'special');
       setGamePhase('GAME_OVER');
       if (isOnlineMatch) syncToOnline({ gamePhase: 'GAME_OVER' });
@@ -1282,17 +1435,18 @@ export default function App() {
     }
 
     // 手札公開状態（O, P, Q, T）を確実に元に戻す
-    const cleanedPlayers = players.map((p) => ({
+    const cleanedPlayers = latest.players.map((p) => ({
       ...p,
       isRevealedToAll: false,
       revealedToPlayers: {},
     }));
     setPlayers(cleanedPlayers);
+    latestRef.current.players = cleanedPlayers;
     setHandInspection(null);
 
     // 手番は時計回りに次のプレイヤーへ進む
-    const nextIndex = (turnPlayerIndex + 1) % cleanedPlayers.length;
-    startPlayerTurn(nextIndex, cleanedPlayers, drawPile, turnNumber + 1);
+    const nextIndex = (latest.turnPlayerIndex + 1) % cleanedPlayers.length;
+    startPlayerTurn(nextIndex, cleanedPlayers, latest.drawPile, latest.turnNumber + 1);
   }
 
   // Close Hand Inspection Modal and revert revealed hands to normal
@@ -1305,6 +1459,7 @@ export default function App() {
       revealedToPlayers: {},
     }));
     setPlayers(updated);
+    latestRef.current.players = updated;
     addLog('公開されていた手札の確認が完了し、非公開（元通り）に戻されました。', 'effect');
     if (isOnlineMatch) {
       syncToOnline({ players: updated });
@@ -1316,7 +1471,7 @@ export default function App() {
     if (!effectInteraction) return;
 
     // Security check: Only the actor can choose!
-    if (humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
+    if (isOnlineMatch && humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
       return;
     }
 
@@ -1329,6 +1484,7 @@ export default function App() {
     if (effectInteraction.type === 'WEREWOLF_SEARCH_DECK') {
       updatedDrawPile = updatedDrawPile.filter((c) => c.letter !== card.letter);
       setDrawPile(updatedDrawPile);
+      latestRef.current.drawPile = updatedDrawPile;
       actor.hand.push(card);
       addLog(`${actor.name} は山札から「${card.japaneseName}」を選び手札に加えました！`, 'effect');
     } else if (effectInteraction.type === 'VAMPIRE_STEAL' || effectInteraction.type === 'XENOS_STEAL') {
@@ -1347,6 +1503,7 @@ export default function App() {
     }
 
     setPlayers(updatedPlayers);
+    latestRef.current.players = updatedPlayers;
     setEffectInteraction(null);
     setWaitingForBattleNext(true);
 
@@ -1364,7 +1521,7 @@ export default function App() {
     if (!effectInteraction) return;
 
     // Security check: Only the actor can choose!
-    if (humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
+    if (isOnlineMatch && humanPlayer && effectInteraction.actorPlayerId && effectInteraction.actorPlayerId !== humanPlayer.id) {
       return;
     }
 
@@ -1400,6 +1557,7 @@ export default function App() {
     }
 
     setPlayers(updatedPlayers);
+    latestRef.current.players = updatedPlayers;
     setEffectInteraction(null);
     setWaitingForBattleNext(true);
 
@@ -1438,18 +1596,30 @@ export default function App() {
     }
   };
 
+  const isLocalMultiHuman =
+    !isOnlineMatch && players.filter((p) => p.type === 'human').length > 1;
+
   const humanPlayer = isOnlineMatch && myOnlinePlayerId
     ? (players.find((p) => p.id === myOnlinePlayerId) || players[0])
+    : isLocalMultiHuman
+    ? (
+        gamePhase === 'OPPONENT_SELECT_CARD' && defenderId
+          ? (players.find((p) => p.id === defenderId) || players[turnPlayerIndex] || players[0])
+          : gamePhase === 'EFFECT_INTERACTION' && effectInteraction?.actorPlayerId
+          ? (players.find((p) => p.id === effectInteraction.actorPlayerId) || players[turnPlayerIndex] || players[0])
+          : (players[turnPlayerIndex] || players[0])
+      )
     : (players.find((p) => p.type === 'human') || players[0]);
   const opponents = players.filter((p) => p.id !== humanPlayer?.id);
 
   // Turn checks for Human Player
-  const isHumanTurn = players[turnPlayerIndex]?.id === humanPlayer?.id;
+  const activeTurnPlayer = players[turnPlayerIndex];
+  const isHumanTurn = activeTurnPlayer?.id === humanPlayer?.id && activeTurnPlayer?.type === 'human';
   const isHumanChallenged =
-    gamePhase === 'OPPONENT_SELECT_CARD' && defenderId === humanPlayer?.id;
+    gamePhase === 'OPPONENT_SELECT_CARD' && defenderId === humanPlayer?.id && humanPlayer?.type === 'human';
 
   const canHumanPlayCard =
-    (isHumanTurn && gamePhase === 'SELECT_PLAY_CARD') || isHumanChallenged;
+    (isHumanTurn && gamePhase === 'SELECT_PLAY_CARD' && !confirmingOpponent) || isHumanChallenged;
 
   return (
     <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-950 text-slate-100 flex flex-col font-serif-jp select-none w-full max-w-full">
@@ -1465,6 +1635,7 @@ export default function App() {
         onNewGame={() => {
           if (cpuAutoAdvanceTimer.current) clearTimeout(cpuAutoAdvanceTimer.current);
           if (cpuTurnTimer.current) clearTimeout(cpuTurnTimer.current);
+          if (cpuDefenderTimer.current) clearTimeout(cpuDefenderTimer.current);
           setIsOnlineMatch(false);
           setOnlineRoomId(null);
           setGamePhase('TITLE');
@@ -1492,7 +1663,7 @@ export default function App() {
               allPlayers={players}
               activePlayerId={players[turnPlayerIndex]?.id}
               defenderId={defenderId}
-              isSelectOpponentPhase={isHumanTurn && gamePhase === 'SELECT_OPPONENT'}
+              isSelectOpponentPhase={isHumanTurn && gamePhase === 'SELECT_OPPONENT' && !confirmingOpponent}
               onSelectOpponent={handleHumanSelectOpponent}
               viewerPlayerId={humanPlayer?.id || 'p1'}
               onInspectPlayer={handleOpenInspectPlayer}
@@ -1501,7 +1672,7 @@ export default function App() {
 
             {/* Center Area: Battle Arena */}
             <BattleArena
-              challenger={players.find((p) => p.id === challengerId) || null}
+              challenger={players.find((p) => p.id === challengerId) || players[turnPlayerIndex] || null}
               defender={players.find((p) => p.id === defenderId) || null}
               challengerCard={challengerCard}
               defenderCard={defenderCard}
@@ -1510,7 +1681,7 @@ export default function App() {
               isRevolution={isRevolution}
               deckCount={drawPile.length}
               discardCount={discardPile.length}
-              viewerPlayerId={isOnlineMatch ? (myOnlinePlayerId || undefined) : humanPlayer?.id}
+              viewerPlayerId={isOnlineMatch ? (myOnlinePlayerId || undefined) : isLocalMultiHuman ? undefined : humanPlayer?.id}
               onContinue={handleAdvanceTurn}
               waitingForPlayerAction={waitingForBattleNext}
               onStartClash={handleStartClash}
