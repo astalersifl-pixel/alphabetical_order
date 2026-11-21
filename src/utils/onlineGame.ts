@@ -183,7 +183,7 @@ export async function startOnlineGame(roomId: string, players: RoomPlayer[]): Pr
     isRevolution: false,
     turnNumber: 1,
     gamePhase: 'SELECT_PLAY_CARD',
-    challengerId: null,
+    challengerId: gamePlayers[0]?.id ?? null,
     defenderId: null,
     challengerCard: null,
     defenderCard: null,
